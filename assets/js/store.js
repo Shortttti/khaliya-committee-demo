@@ -1,6 +1,7 @@
 const KEY='nawa.workspace.v2';
 const seed={
  role:'manager',language:'ar',
+ clientRequests:[],
  projects:[
   {id:'P-001',code:'NAWA-001',name:'مركز الرياض للأعمال',client:'شركة أفق للتطوير',manager:'سارة الحربي',location:'الرياض',type:'مبنى تجاري',start:'2026-06-01',due:'2026-11-30',progress:68,status:'على المسار',team:6,budget:2850000},
   {id:'P-002',code:'NAWA-002',name:'فيلا الروضة السكنية',client:'مؤسسة الروضة',manager:'أحمد السالم',location:'جدة',type:'سكني',start:'2026-05-14',due:'2026-11-18',progress:75,status:'على المسار',team:4,budget:780000},
