@@ -8,3 +8,8 @@
 
 .wizard-card input:not([type=checkbox]):not([type=radio]),.wizard-card select{display:block;width:100%;height:45px;margin-top:7px;border:1px solid #dce4dd;border-radius:7px;padding:0 12px;background:#fff;color:#293b30;outline:none}
 .wizard-card input:focus,.wizard-card select:focus{border-color:#679378;box-shadow:0 0 0 3px #24694f12}
+
+/* Shared public flow interaction, readability and keyboard support */
+:root{--p-transition:180ms ease;--p-focus:0 0 0 3px rgba(193,162,91,.35)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #b69a55;outline-offset:2px}.button,.feature-card,.account-choice,.wizard-step,.nav-toggle{transition:transform var(--p-transition),box-shadow var(--p-transition),background-color var(--p-transition),border-color var(--p-transition)}.feature-card:hover,.account-choice:hover{border-color:#cbdacb;box-shadow:0 8px 22px rgba(18,60,49,.07);transform:translateY(-1px)}.button:active{transform:translateY(1px)}.wizard-card input:not([type=checkbox]):not([type=radio]):focus,.wizard-card select:focus{box-shadow:var(--p-focus)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

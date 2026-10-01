@@ -8,3 +8,6 @@
   --radius-sm:9px;--radius:14px;--radius-lg:20px;--sidebar-width:258px;--topbar-height:72px;
   --font-ui:"IBM Plex Sans Arabic","Noto Sans Arabic",Tahoma,sans-serif;--font-en:Inter,system-ui,sans-serif;
 }
+
+/* Shared NAWA interface tokens */
+:root{--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--space-8:32px;--transition-fast:180ms ease;--transition-panel:280ms ease;--focus-ring:0 0 0 3px rgba(193,162,91,.35);--surface-raised:#fff;--line-strong:#cbd7cd;--forest-hover:#174f3a;--text-secondary:#58685e}
