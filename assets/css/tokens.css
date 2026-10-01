@@ -1,0 +1,10 @@
+:root{
+  color-scheme:light;
+  --forest-950:#103d2e;--forest-900:#14513a;--forest-800:#1d6648;--forest-700:#287b56;--forest-100:#e8f2eb;--forest-50:#f3f8f3;
+  --gold-700:#8c6b27;--gold-500:#c1a25b;--gold-100:#f4edda;
+  --ink:#202c26;--muted:#68766e;--soft:#8b9890;--line:#e3e9e3;--canvas:#f5f6f2;--surface:#fff;
+  --red:#c84d47;--red-bg:#fff0ee;--amber:#a87822;--amber-bg:#fff6e6;--green:#267458;--green-bg:#e8f5ed;--blue:#356e8a;--blue-bg:#eaf3f8;
+  --shadow-sm:0 2px 7px rgba(16,61,46,.045);--shadow-md:0 12px 28px rgba(16,61,46,.075);--shadow-lg:0 22px 60px rgba(16,61,46,.12);
+  --radius-sm:9px;--radius:14px;--radius-lg:20px;--sidebar-width:258px;--topbar-height:72px;
+  --font-ui:"IBM Plex Sans Arabic","Noto Sans Arabic",Tahoma,sans-serif;--font-en:Inter,system-ui,sans-serif;
+}
