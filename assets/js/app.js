@@ -1,5 +1,5 @@
-import './shell.js';
-import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses} from './store.js';
+import './shell.js?v=ux-03';
+import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses} from './store.js?v=ux-03';
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)], page=document.body.dataset.page||'overview';
 const content=$('#appContent');
 const fmtDate=(s)=>{if(!s)return '—';const d=new Date(`${s}T00:00:00`);return new Intl.DateTimeFormat('ar-SA',{day:'numeric',month:'short'}).format(d)};

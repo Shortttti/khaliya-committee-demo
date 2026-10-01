@@ -30,7 +30,7 @@ const seed={
  approvals:[
   {id:'APR-008',title:'مخطط معماري A-104 v3',project:'P-001',type:'مراجعة تصميم',recipient:'شركة أفق للتطوير',sent:'2026-09-29',status:'بانتظار العميل',change:'CR-017'},
   {id:'APR-009',title:'تقرير تقدم سبتمبر',project:'P-002',type:'اعتماد تقرير',recipient:'مؤسسة الروضة',sent:'2026-09-30',status:'بانتظار العميل',change:''},
-  {id:'APR-010',title:'قرار D-014 — موقع الغرفة',project:'P-001',type:'مراجعة هندسية',recipient:'مديرة المكتب',sent:'2026-09-28',status:'معتمد',change:'CR-017'}
+  {id:'APR-010',title:'قرار D-014 — موقع الغرفة',project:'P-001',type:'مراجعة هندسية',recipient:'إدارة المكتب',sent:'2026-09-28',status:'معتمد',change:'CR-017'}
  ],
  team:[
   {name:'سارة الحربي',initial:'س',discipline:'هندسة معمارية',role:'مديرة مشروع',capacity:82,color:'',projects:2},
@@ -56,5 +56,5 @@ export function resetState(){localStorage.removeItem(KEY);window.location.reload
 export function projectById(id,state=getState()){return state.projects.find(p=>p.id===id)||state.projects[0]}
 export function tasksFor(projectId,state=getState()){return state.tasks.filter(t=>!projectId||t.project===projectId)}
 export function addActivity(text,detail='تحديث في مساحة العمل'){updateState(s=>s.activity.unshift({text,detail,time:'الآن'}))}
-export const roles={manager:'مديرة المكتب',pm:'مدير المشروع',engineer:'مهندس',client:'العميل'};
+export const roles={manager:'إدارة المكتب',pm:'إدارة المشروع',engineer:'الفريق الهندسي',client:'العميل'};
 export const statuses=['قائمة المهام','قيد التنفيذ','قيد المراجعة','متأخرة','مكتملة'];
