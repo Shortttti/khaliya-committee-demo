@@ -10,7 +10,7 @@
 python3 -m http.server 8000
 ```
 
-افتح `http://localhost:8000/` لمعاينة لوحة المكتب. بقية الأقسام متاحة مباشرة كصفحات: `projects.html`, `workspace.html`, `changes.html`, `thread.html`, `tasks.html`, `files.html`, `approvals.html`, `team.html`, `client.html`, `ai.html`, `reports.html`, و`settings.html`.
+افتح `http://localhost:8000/` ليدخلك مباشرة إلى واجهة النسخة الأساسية (`mvp.html`). الواجهة مركزة ومصنفة حسب الدور، أما التجارب الإضافية فلها قسم منفصل. بقية الأقسام متاحة مباشرة كصفحات: `projects.html`, `workspace.html`, `changes.html`, `thread.html`, `tasks.html`, `files.html`, `approvals.html`, `team.html`, `client.html`, `ai.html`, `reports.html`, و`settings.html`.
 
 ## بنية المشروع
 
