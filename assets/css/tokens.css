@@ -11,3 +11,21 @@
 
 /* Shared NAWA interface tokens */
 :root{--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--space-8:32px;--transition-fast:180ms ease;--transition-panel:280ms ease;--focus-ring:0 0 0 3px rgba(193,162,91,.35);--surface-raised:#fff;--line-strong:#cbd7cd;--forest-hover:#174f3a;--text-secondary:#58685e}
+
+/* Contrast-safe shared interface tokens */
+:root{
+  --muted:#59685f;
+  --soft:#6d7b72;
+  --line:#dbe4dc;
+  --line-strong:#c3d0c5;
+  --canvas:#f4f7f4;
+  --surface:#fff;
+  --surface-raised:#fff;
+  --radius-sm:10px;
+  --radius:14px;
+  --radius-lg:18px;
+  --space-5:20px;
+  --space-7:28px;
+  --transition-fast:180ms cubic-bezier(.2,.7,.2,1);
+  --transition-panel:280ms cubic-bezier(.2,.7,.2,1);
+}

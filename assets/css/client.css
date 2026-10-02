@@ -7,3 +7,9 @@
 .client-action-card>em{grid-column:2;grid-row:3;margin-top:3px}
 .client-action-card>strong{grid-column:3;grid-row:1/4;align-self:center;font-size:21px}
 @media(max-width:600px){.client-action-card{grid-template-columns:34px minmax(0,1fr) auto;gap:3px 9px;padding:12px}}
+
+/* Client summary widgets share a stable height and clearer text hierarchy. */
+.client-action-card{min-height:82px;align-content:center;border-color:#dbe4dc}
+.client-action-card>b{font-size:13px}
+.client-action-card>small,.client-action-card>em{font-size:11px;line-height:1.5}
+@media(max-width:600px){.client-action-card{min-height:76px}}
