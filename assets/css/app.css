@@ -336,3 +336,79 @@ html[data-theme="dark"] .settings-control-card small{color:#aab9ae}
 @media(max-width:780px){html[dir="ltr"] .main-shell{margin-left:0}.display-controls{border:0;padding:0;gap:4px}.display-btn{min-height:33px;padding-inline:7px}.theme-toggle span{display:none}.font-controls{gap:0}}
 @media(max-width:520px){.topbar{gap:5px;padding-inline:9px}.topbar-actions{gap:5px}.top-search input{width:clamp(78px,24vw,118px);height:34px;padding-inline:30px 7px;font-size:10px}.top-search svg{right:9px;width:14px}.display-controls{gap:3px}.display-btn{min-width:32px;padding-inline:6px}.font-controls .font-btn{min-width:28px;font-size:10px}.font-size-indicator{min-width:13px;font-size:9px}.icon-btn{width:33px;height:33px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* Refined dashboard sizing, compact controls, and shared NAWA plan mark */
+.brand-mark svg,.brand-symbol svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.brand-mark{display:grid;place-items:center}
+.brand-symbol{width:41px;height:41px;display:grid;place-items:center;flex:none}
+.brand-symbol svg{width:28px;height:28px}
+.top-user{gap:7px;padding:4px 6px 4px 9px;border:1px solid var(--line);border-radius:12px;background:var(--surface);transition:border-color .18s,box-shadow .18s}
+.top-user:hover{border-color:#b9cbbd;box-shadow:var(--shadow-sm)}
+.top-user-text{min-width:0;max-width:130px}
+.signout-compact{display:grid;place-items:center;width:29px;height:29px;flex:none;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--muted);transition:color .18s,background .18s,border-color .18s,transform .18s}
+.signout-compact svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.signout-compact:hover{color:#b74e43;background:#fff1ee;border-color:#f0c3bc;transform:translateY(-1px)}
+.language-toggle{width:34px;padding:0}
+.language-toggle svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}
+.display-btn>span{display:none}
+.manager-stats{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(104px,1fr);max-width:1120px;gap:12px}
+.manager-stats>a{min-height:104px;height:100%;display:grid;grid-template-columns:minmax(0,1fr) 40px;grid-template-rows:auto 1fr;align-items:center;column-gap:12px;row-gap:4px;padding:15px 17px;transition:transform .2s,box-shadow .2s,border-color .2s}
+.manager-stats>a:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(23,61,43,.09)}
+.manager-stats>a>span{grid-column:1;grid-row:1}
+.manager-stats>a>b{grid-column:1;grid-row:2;align-self:end;margin:0;font-size:27px}
+.manager-stats>a>.stat-symbol{grid-column:2;grid-row:1/3;justify-self:end;align-self:center}
+.task-achievement{max-width:920px;margin:0 0 14px;overflow:hidden;border-radius:14px;transition:border-color .22s,box-shadow .22s,transform .22s}
+.task-achievement:hover,.task-achievement.is-expanded{border-color:#b7cdbd;box-shadow:0 12px 28px rgba(19,56,38,.09)}
+.achievement-toggle{width:100%;min-height:90px;display:flex;align-items:center;gap:15px;padding:15px 18px;border:0;background:var(--surface);color:var(--ink);text-align:start;cursor:pointer}
+.achievement-toggle:focus-visible{outline:2px solid var(--forest-700);outline-offset:-3px}
+.achievement-trophy{display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:12px;background:var(--gold-100);color:#927431;transition:transform .28s cubic-bezier(.2,.8,.2,1),background .2s}
+.achievement-trophy svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.task-achievement:hover .achievement-trophy{transform:translateY(-2px) rotate(-7deg);background:#f3e7c3}
+.achievement-copy{display:grid;gap:6px;flex:1;min-width:0}
+.achievement-copy>b{font-size:13px;color:#33463a}
+.achievement-copy>small{font-size:10px;color:#758278}
+.achievement-copy>small strong{color:var(--forest-800)}
+.achievement-track{height:5px;display:block;overflow:hidden;border-radius:9px;background:#edf1ed}
+.achievement-track>i{height:100%;display:block;border-radius:inherit;background:linear-gradient(90deg,#287b56,#c1a25b);transition:width .55s cubic-bezier(.2,.7,.2,1)}
+.achievement-ring{width:55px;height:55px;flex:none;display:grid;place-items:center;border-radius:50%;background:conic-gradient(var(--forest-700) var(--completion),#e9eee9 0);position:relative;color:#2f674a;font:700 12px var(--font-en)}
+.achievement-ring:before{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--surface)}
+.achievement-ring>b{position:relative}
+.achievement-expand{color:var(--muted);font-size:17px;transition:transform .2s}
+.achievement-toggle[aria-expanded="true"] .achievement-expand{transform:rotate(180deg)}
+.achievement-detail{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 18px 15px 75px;color:#637269;font-size:10px;animation:achievement-open .22s ease both}
+.achievement-detail[hidden]{display:none}
+.achievement-detail>b{color:#365540}
+.achievement-milestones{display:flex;gap:6px}
+.achievement-milestones>span{display:grid;place-items:center;min-width:43px;height:29px;padding:0 7px;border:1px solid var(--line);border-radius:20px;color:#89948b;font:600 10px var(--font-en);transition:background .2s,color .2s,transform .2s}
+.achievement-milestones>span.unlocked{background:#e8f3ea;border-color:#d0e2d1;color:#31724c;transform:translateY(-1px)}
+@keyframes achievement-open{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+/* Night palette uses the same surface, text, and border tokens across every card. */
+html[data-theme="dark"]{color-scheme:dark;--surface:#1b2821;--canvas:#111a15;--ink:#e7eee9;--muted:#b0beb4;--soft:#95a79a;--line:#31443a;--forest-50:#202f27;--forest-100:#25382d;--red-bg:#3a2523;--amber-bg:#392f1d;--green-bg:#20372a;--blue-bg:#202f38;--gold-100:#393321}
+html[data-theme="dark"] .topbar{border-color:#283a30}
+html[data-theme="dark"] .manager-stats>a,html[data-theme="dark"] .achievement-toggle,html[data-theme="dark"] .task-achievement,html[data-theme="dark"] .task-card,html[data-theme="dark"] .team-card,html[data-theme="dark"] .suggestion,html[data-theme="dark"] .thread-node,html[data-theme="dark"] .impact-cell,html[data-theme="dark"] .consult-flow,html[data-theme="dark"] .consult-specialty,html[data-theme="dark"] .settings-choice,html[data-theme="dark"] .role-select,html[data-theme="dark"] .select,html[data-theme="dark"] .quick-link,html[data-theme="dark"] .simple-list a,html[data-theme="dark"] .attention-row,html[data-theme="dark"] .manager-project,html[data-theme="dark"] .manager-secondary,html[data-theme="dark"] .manager-metrics a,html[data-theme="dark"] .manager-shortcuts a,html[data-theme="dark"] .top-user,html[data-theme="dark"] .signout-compact{background:#1b2821;color:#e7eee9;border-color:#31443a}
+html[data-theme="dark"] .top-user-text small,html[data-theme="dark"] .achievement-copy>small,html[data-theme="dark"] .achievement-detail{color:#b0beb4}
+html[data-theme="dark"] .achievement-copy>b,html[data-theme="dark"] .achievement-detail>b{color:#e0ebe3}
+html[data-theme="dark"] .achievement-ring{color:#bfe0c8;background:conic-gradient(#75ae83 var(--completion),#34463a 0)}
+html[data-theme="dark"] .achievement-track{background:#33443a}
+html[data-theme="dark"] .achievement-trophy{background:#3d3723;color:#dfca82}
+html[data-theme="dark"] .achievement-milestones>span{border-color:#3a4d41;color:#a7b5ab}
+html[data-theme="dark"] .achievement-milestones>span.unlocked{background:#243d2d;border-color:#365844;color:#acd5b6}
+html[data-theme="dark"] .client-request-form input,html[data-theme="dark"] .client-request-form select,html[data-theme="dark"] .client-request-form textarea,html[data-theme="dark"] .consultation-form input,html[data-theme="dark"] .consultation-form select,html[data-theme="dark"] .consultation-form textarea,html[data-theme="dark"] .settings-form input,html[data-theme="dark"] .settings-form select,html[data-theme="dark"] input,html[data-theme="dark"] textarea,html[data-theme="dark"] select{background:#132019!important;color:#ecf2ed;border-color:#3a5043}
+html[data-theme="dark"] :is(.panel-head h2,.stat-value,.stat-label,.stat-foot,.manager-project-info b,.manager-project-info small,.manager-section-head h2,.manager-section-head p,.manager-welcome h1,.manager-welcome p,.engineer-welcome h1,.engineer-welcome p,.consult-specialty b,.settings-choice b,.field label,.detail-row,.data-table td,.data-table th,.module-toolbar strong,.module-row strong,.client-action-card>b,.client-action-card>small,.task-card b,.team-card b,.notice,.count-note){color:#d9e5dc}
+html[data-theme="dark"] .manager-welcome,html[data-theme="dark"] .engineer-welcome{background:#1b2821!important;border-color:#31443a}
+html[dir="ltr"] .achievement-detail{padding:0 75px 15px 18px}
+@media(max-width:900px){.manager-stats{grid-template-columns:repeat(2,minmax(0,1fr));max-width:920px}}
+@media(max-width:600px){.manager-stats{grid-template-columns:1fr}.manager-stats>a{min-height:94px}.achievement-toggle{gap:10px;padding:12px}.achievement-trophy{width:36px;height:36px}.achievement-ring{width:47px;height:47px}.achievement-detail{align-items:flex-start;flex-direction:column;padding-inline:58px 12px}.top-user{gap:5px;padding-inline:5px}.top-user-text{max-width:95px}.signout-compact{width:27px;height:27px}}
+@media(prefers-reduced-motion:reduce){.achievement-ring,.achievement-track>i,.achievement-expand,.achievement-trophy{transition:none;animation:none}}
+
+.font-controls .font-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.font-size-indicator{display:none}
+@media(max-width:980px){.top-user-text{display:block}}
+/* Fine pointer feedback gives cards a quiet sense of depth without slowing navigation. */
+.manager-stats>a,.manager-project,.task-achievement,.achievement-toggle{transform-style:preserve-3d;transition:transform .22s cubic-bezier(.2,.7,.2,1),box-shadow .22s,border-color .22s}
+.manager-stats>a.pointer-active,.manager-project.pointer-active,.task-achievement.pointer-active,.achievement-toggle.pointer-active{transform:perspective(850px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg)) translateY(-2px)}
+.manager-welcome,.manager-stats>a,.manager-project,.task-achievement,.achievement-toggle{position:relative;overflow:hidden}
+.manager-welcome:after,.manager-stats>a:after,.manager-project:after,.task-achievement:after,.achievement-toggle:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(180px circle at var(--pointer-x,50%) var(--pointer-y,50%),rgba(204,225,205,.24),transparent 72%);transition:opacity .2s}
+.manager-welcome.pointer-active:after,.manager-stats>a.pointer-active:after,.manager-project.pointer-active:after,.task-achievement.pointer-active:after,.achievement-toggle.pointer-active:after{opacity:1}
+html[data-theme="dark"] .manager-welcome:after,html[data-theme="dark"] .manager-stats>a:after,html[data-theme="dark"] .manager-project:after,html[data-theme="dark"] .task-achievement:after,html[data-theme="dark"] .achievement-toggle:after{background:radial-gradient(180px circle at var(--pointer-x,50%) var(--pointer-y,50%),rgba(108,158,118,.16),transparent 72%)}
+@media(prefers-reduced-motion:reduce){.manager-stats>a,.manager-project,.task-achievement,.achievement-toggle{transform:none!important;transition:none!important}}
