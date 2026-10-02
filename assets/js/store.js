@@ -1,7 +1,7 @@
 const KEY='nawa.workspace.v2';
 const seed={
  role:'manager',language:'ar',
- clientRequests:[],
+ clientRequests:[], consultations:[],
  projects:[
   {id:'P-001',code:'NAWA-001',name:'مركز الرياض للأعمال',client:'شركة أفق للتطوير',manager:'سارة الحربي',location:'الرياض',type:'مبنى تجاري',start:'2026-06-01',due:'2026-11-30',progress:68,status:'على المسار',team:6,budget:2850000},
   {id:'P-002',code:'NAWA-002',name:'فيلا الروضة السكنية',client:'مؤسسة الروضة',manager:'أحمد السالم',location:'جدة',type:'سكني',start:'2026-05-14',due:'2026-11-18',progress:75,status:'على المسار',team:4,budget:780000},
@@ -47,7 +47,7 @@ const seed={
   {text:'أُرسل تقرير التقدم للمراجعة',detail:'فيلا الروضة السكنية',time:'أمس'}
  ],
  notifications:[{id:'N-1',text:'اعتماد A-104 v3 ينتظر رد العميل',type:'اعتماد',seen:false},{id:'N-2',text:'تعارض مرجعي بين M-203 و A-104',type:'تنسيق',seen:false},{id:'N-3',text:'مهمة توزيع الهواء متأخرة',type:'مهمة',seen:true}],
- settings:{office:'مكتب أفق للاستشارات',project:'P-001',currency:'SAR'}
+ settings:{office:'مكتب أفق للاستشارات',project:'P-001',currency:'SAR',theme:'light',language:'ar',fontSize:'normal'}
 };
 export function getState(){try{const stored=localStorage.getItem(KEY);if(!stored)return structuredClone(seed);const parsed=JSON.parse(stored);return {...structuredClone(seed),...parsed,settings:{...seed.settings,...parsed.settings}}}catch{return structuredClone(seed)}}
 export function saveState(state){localStorage.setItem(KEY,JSON.stringify(state));window.dispatchEvent(new CustomEvent('nawa:state',{detail:state}));return state}
