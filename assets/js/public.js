@@ -1,3 +1,6 @@
+import { auth, db } from './firebase.js';
+import { doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+
 const $=(s,r=document)=>r.querySelector(s);
 const params=new URLSearchParams(location.search);
 if(document.querySelector('[data-auth="signup"]')&&params.get('role')){const choice=document.querySelector(`[name="role"][value="${params.get('role')}"]`);if(choice)choice.checked=true}
@@ -9,9 +12,49 @@ document.querySelector('[data-forgot]')?.addEventListener('click',e=>{e.preventD
 document.querySelector('[data-auth="login"]')?.addEventListener('submit',e=>{e.preventDefault();let role='manager';try{role=JSON.parse(localStorage.getItem('nawa.workspace.v2')||'{}').user?.role||role}catch{}goWorkspace(role)});
 document.querySelector('[data-auth="signup"]')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.currentTarget),role=f.get('role')||'manager',u=roles[role];try{const state=JSON.parse(localStorage.getItem('nawa.workspace.v2')||'{}');state.user={name:f.get('name')||u.name,initial:(f.get('name')||u.name).trim().slice(0,1),role};if(role==='manager')state.settings={...(state.settings||{}),office:''};localStorage.setItem('nawa.workspace.v2',JSON.stringify(state));sessionStorage.setItem('nawa-onboarding-role',role);sessionStorage.setItem('nawa-onboarding-name',f.get('name')||u.name);sessionStorage.setItem('nawa-onboarding-email',f.get('email')||'')}catch{}location.href='onboarding.html'});
 const onboarding=$('[data-onboarding]');
-if(onboarding){let role=sessionStorage.getItem('nawa-onboarding-role')||params.get('role')||'manager';if(!roles[role])role='manager';const u=roles[role];$('[data-role-label]').textContent=u.label;const isJoin=role==='engineer'||role==='pm',isClient=role==='client',isManager=role==='manager';document.querySelectorAll('[data-office-field] input,[data-office-field] select').forEach(field=>{field.disabled=!isManager;field.required=isManager&&field.name==='office'});if(isJoin||isClient){$('[data-onboard-title]').textContent=isClient?'الانضمام إلى المشروع':'الانضمام إلى المكتب';$('[data-onboard-desc]').textContent=isClient?'رمز دعوة المشروع أو البريد المرتبط بالدعوة.':'رمز الدعوة المرسل من المكتب الهندسي.';$('[data-step-title]').textContent=isClient?'التحقق من دعوة المشروع':'دعوة المكتب';$('[data-step-desc]').textContent=isClient?'يمنحك رمز الدعوة الوصول إلى بيانات العميل المشتركة فقط.':'يلزم رمز دعوة للوصول إلى مساحة عمل المكتب.';document.querySelectorAll('[data-office-field]').forEach(x=>x.hidden=true);document.querySelectorAll('[data-invite-field]').forEach(x=>x.hidden=isClient);document.querySelectorAll('[data-client-field]').forEach(x=>x.hidden=!isClient);$('[data-step2-title]').textContent='تفضيلات مساحة العمل';$('[data-step2-desc]').textContent='ستظهر لك المشاريع والعناصر التي لديك صلاحية الوصول إليها.';$('[data-ready-title]').textContent='تم تجهيز مسار الانضمام.';$('[data-ready-desc]').textContent='تجربة الواجهة تستخدم بيانات توضيحية. تفعيل الدعوة يحتاج اتصالًا بخدمة الحسابات.'}
+if(onboarding){let role=sessionStorage.getItem('nawa-onboarding-role')||params.get('role')||'manager';if(!roles[role])role='manager';const u=roles[role];$('[data-role-label]').textContent=u.label;const isJoin=role==='engineer'||role==='pm',isClient=role==='client',isManager=role==='manager';document.querySelectorAll('[data-office-field] input,[data-office-field] select').forEach(field=>{field.disabled=!isManager;field.required=isManager&&field.name==='office'});if(isJoin||isClient){$('[data-onboard-title]').textContent=isClient?'الانضمام إلى المشروع':'الانضمام إلى المكتب';$('[data-onboard-desc]').textContent=isClient?'رمز دعوة المشروع أو البريد المرتبط بالدعوة.':'رمز الدعوة المرسل من المكتب الهندسي.';$('[data-step-title]').textContent=isClient?'التحقق من دعوة المشروع':'دعوة المكتب';$('[data-step-desc]').textContent=isClient?'يمنحك رمز الدعوة الوصول إلى بيانات العميل المشتركة فقط.':'يلزم رمز دعوة للوصول إلى مساحة عمل المكتب.';document.querySelectorAll('[data-office-field]').forEach(x=>x.hidden=true);document.querySelectorAll('[data-invite-field]').forEach(x=>x.hidden=isClient);document.querySelectorAll('[data-client-field]').forEach(x=>x.hidden=!isClient);$('[data-step2-title]').textContent='تفضيلات مساحة العمل';$('[data-step2-desc]').textContent='ستظهر لك المشاريع والعناصر التي لديك صلاحية الوصول إليها.';$('[data-ready-title]').textContent='تم تجهيز مسار الانضمام.';$('[data-ready-desc]').textContent='تم ربط الحساب بـ Firebase. تفعيل دعوات المكتب والمشروع سيعتمد على الصلاحيات التي سنثبتها لاحقًا.'}
 let step=1;const show=(next)=>{step=next;document.querySelectorAll('.wizard-panel').forEach(x=>x.classList.toggle('active',Number(x.dataset.step)===step));document.querySelectorAll('.wizard-step').forEach((x,i)=>{x.classList.toggle('current',i+1===step);x.classList.toggle('done',i+1<step)});$('[data-progress]').style.width=step===1?'33%':step===2?'67%':'100%';if(step===3){const name=$('[name="office"]')?.value.trim()||u.office;$('[data-ready-office]').textContent=name;$('[data-ready-role]').textContent=u.label;$('[data-skip]').hidden=true}};
-document.querySelectorAll('[data-next]').forEach(b=>b.addEventListener('click',()=>{if(step===1&&role==='manager'){const name=$('[name="office"]')?.value.trim();if(!name){$('[name="office"]')?.focus();return}}show(Math.min(step+1,3))}));document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>show(Math.max(step-1,1))));$('[data-add-invite]')?.addEventListener('click',()=>{const val=$('[name="teammate"]').value.trim();$('.invite-feedback').textContent=val?`أُضيف ${val} إلى قائمة الدعوات لهذه المعاينة.`:'إضافة بريد الزميل أولًا.'});onboarding.addEventListener('submit',e=>{e.preventDefault();if(role==='manager'){const office=$('[name="office"]')?.value.trim();try{const state=JSON.parse(localStorage.getItem('nawa.workspace.v2')||'{}');state.settings={...(state.settings||{}),office};localStorage.setItem('nawa.workspace.v2',JSON.stringify(state))}catch{}}goWorkspace(role)});$('[data-skip]')?.addEventListener('click',e=>{e.preventDefault();goWorkspace(role)});}
+document.querySelectorAll('[data-next]').forEach(b=>b.addEventListener('click',()=>{if(step===1&&role==='manager'){const name=$('[name="office"]')?.value.trim();if(!name){$('[name="office"]')?.focus();return}}show(Math.min(step+1,3))}));document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>show(Math.max(step-1,1))));$('[data-add-invite]')?.addEventListener('click',()=>{const val=$('[name="teammate"]').value.trim();$('.invite-feedback').textContent=val?`أُضيف ${val} إلى قائمة الدعوات لهذه المعاينة.`:'إضافة بريد الزميل أولًا.'});onboarding.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const submit=e.target.querySelector('[type="submit"]');
+  if(submit){submit.disabled=true;submit.textContent='جارٍ حفظ الإعداد…'}
+  try{
+    const current=auth.currentUser;
+    if(!current)throw new Error('AUTH_REQUIRED');
+    const office=$('[name="office"]')?.value.trim()||'';
+    const officeId=role==='manager'?('office-'+current.uid):null;
+    const payload={
+      onboardingComplete:true,
+      updatedAt:serverTimestamp()
+    };
+    if(role==='manager'){
+      payload.officeId=officeId;
+      payload.officeName=office;
+      payload.company=$('[name="company"]')?.value||'';
+      payload.city=$('[name="city"]')?.value||'';
+      payload.officeEmail=$('[name="officeEmail"]')?.value.trim()||'';
+      payload.permissions={allProjects:true,officeWideAI:true,knowledgeVisibilities:['internal','shared','client'],writeVisibilities:['internal','shared','client']};
+    }
+    await setDoc(doc(db,'users',current.uid),payload,{merge:true});
+    if(role==='manager'){
+      sessionStorage.setItem('nawa-onboarding-office',office);
+      try{
+        const state=JSON.parse(localStorage.getItem('nawa.workspace.v2')||'{}');
+        state.settings={...(state.settings||{}),office};
+        state.user={...(state.user||{}),officeId};
+        localStorage.setItem('nawa.workspace.v2',JSON.stringify(state));
+      }catch{}
+    }
+    goWorkspace(role);
+  }catch(error){
+    console.error(error);
+    $('.invite-feedback').textContent=error?.message==='AUTH_REQUIRED'
+      ?'انتهت جلسة التسجيل. سجّل الدخول ثم أكمل الإعداد.'
+      :'تعذر حفظ إعداد الحساب. حاول مرة أخرى.';
+  }finally{
+    if(submit){submit.disabled=false;submit.textContent='الدخول إلى مساحة العمل'}
+  }
+});$('[data-skip]')?.addEventListener('click',e=>{e.preventDefault();goWorkspace(role)});}
 
 /* Progressive reveal keeps the landing page calm while making the scroll feel alive. */
 if(document.body.classList.contains('public-page')){
