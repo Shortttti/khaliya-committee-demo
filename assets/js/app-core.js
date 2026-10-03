@@ -369,7 +369,27 @@ async function handleModalSubmit(form){
  }
 }
 render();
-window.addEventListener('khaliya:state',()=>render());
+let deferredWorkspaceRender=false;
+function editableHasFocus(){
+ const active=document.activeElement;
+ return !!(active&&(
+   active.matches?.('input,textarea,select,[contenteditable="true"]')||
+   active.closest?.('form')
+ ));
+}
+function flushDeferredWorkspaceRender(){
+ if(!deferredWorkspaceRender||editableHasFocus())return;
+ deferredWorkspaceRender=false;
+ render();
+}
+window.addEventListener('khaliya:state',()=>{
+ if(editableHasFocus()){
+   deferredWorkspaceRender=true;
+   return;
+ }
+ render();
+});
+document.addEventListener('focusout',()=>setTimeout(flushDeferredWorkspaceRender,0));
 window.addEventListener('khaliya:data-error',event=>{const op=event.detail?.operation;toast(op==='write'?'تعذر حفظ التغيير. تحقق من صلاحيات المكتب واتصل بالمسؤول.':'تعذر تحميل بيانات المكتب.');});
 document.addEventListener('click',e=>{const action=e.target.closest('[data-action]');if(action){const a=action.dataset.action,id=action.dataset.id;if(a==='retry-render'){location.reload();return}if(a==='language-toggle'){updateState(s=>{s.settings.language=s.settings.language==='en'?'ar':'en'});render();return}if(a==='achievement'){const card=e.target.closest('.task-achievement'),detail=card?.querySelector('.achievement-detail'),expanded=e.target.getAttribute('aria-expanded')==='true';if(card&&detail){e.target.setAttribute('aria-expanded',String(!expanded));detail.hidden=expanded;card.classList.toggle('is-expanded',!expanded)}return}if(a==='theme-toggle'){updateState(s=>{s.settings.theme=s.settings.theme==='dark'?'light':'dark'});render();return}if(a==='font-decrease'||a==='font-increase'){const sizes=['small','normal','large'];updateState(s=>{const i=Math.max(0,sizes.indexOf(s.settings.fontSize||'normal'));s.settings.fontSize=sizes[Math.max(0,Math.min(2,i+(a==='font-increase'?1:-1)))]});render();return}if(a==='logout'){window.KHALIYA_PLATFORM.signOut().then(()=>{['khaliya-onboarding-role','khaliya-onboarding-name','khaliya-onboarding-email','khaliya-onboarding-office','nawa-onboarding-role','nawa-onboarding-name','nawa-onboarding-email','nawa-onboarding-office'].forEach(key=>sessionStorage.removeItem(key));location.replace('login.html')}).catch(error=>toast('تعذر تسجيل الخروج: '+(error.message||'خطأ')));return}if(a==='analyze'||a==='report'){
  const s=getState(),projectId=new URLSearchParams(location.search).get('project')||s.settings.project||'',project=s.projects.find(p=>p.id===projectId)||s.projects[0];
