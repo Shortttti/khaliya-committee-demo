@@ -28,13 +28,13 @@ after(async () => {
   await testEnv?.cleanup();
 });
 
-async function seedInvite({ uid, role, tokenEmail, inviteEmail, code, officeId }) {
+async function seedInvite({ uid, role, userRole = role, tokenEmail, inviteEmail, code, officeId }) {
   await testEnv.withSecurityRulesDisabled(async context => {
     const db = context.firestore();
     await setDoc(doc(db, 'users', uid), {
       uid,
       email: tokenEmail,
-      role,
+      role: userRole,
       userCode: 'KHL-' + uid,
       officeId: '',
       officeName: '',
@@ -140,7 +140,7 @@ test('an invite for a different role cannot complete onboarding', async () => {
     code: 'KHALIYA-INV-00000003',
     officeId: 'office-role-mismatch'
   };
-  await seedInvite({ ...args, role: 'pm' });
+  await seedInvite({ ...args, role: 'pm', userRole: 'consultant' });
   const db = testEnv.authenticatedContext(args.uid, { email: args.tokenEmail }).firestore();
   const batch = writeBatch(db);
   batch.update(doc(db, 'publicInvites', args.code), {
