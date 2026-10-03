@@ -51,6 +51,10 @@ service cloud.firestore {
     function validInviteCode(inviteCode) {
       return inviteCode.matches('^KHALIYA-INV-[A-F0-9]{8}$');
     }
+    function inviteEmailMatches(email) {
+      return signedIn() && email is string && request.auth.token.email is string
+        && email.lower() == request.auth.token.email.lower();
+    }
 
     match /users/{uid} {
       allow create: if signedIn() && request.auth.uid == uid
@@ -72,7 +76,7 @@ service cloud.firestore {
           || (request.resource.data.inviteCode is string
             && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.acceptedBy == uid
             && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.officeId == request.resource.data.officeId
-            && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.email == request.auth.token.email
+            && inviteEmailMatches(getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.email)
             && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.role == request.resource.data.role)
         )
         && (request.resource.data.projectIds == resource.data.get('projectIds', [])
@@ -233,10 +237,10 @@ service cloud.firestore {
         && request.resource.data.status == 'pending';
       allow read: if signedIn()
         && (officeManager(resource.data.officeId)
-          || resource.data.email == request.auth.token.email);
+          || inviteEmailMatches(resource.data.email));
       allow update: if signedIn()
         && (officeManager(resource.data.officeId)
-          || (resource.data.email == request.auth.token.email
+          || (inviteEmailMatches(resource.data.email)
             && resource.data.status == 'pending'
             && request.resource.data.acceptedBy == request.auth.uid
             && request.resource.data.status == 'accepted'
