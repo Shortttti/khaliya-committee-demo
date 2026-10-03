@@ -125,7 +125,7 @@ function enablePageTransitions(){
     const url=new URL(link.href,location.href);
     if(url.origin!==location.origin||url.href===location.href)return;
     event.preventDefault();document.body.classList.add('page-leaving');
-    setTimeout(()=>{location.href=url.href},30);
+    location.href=url.href;
   });
 }
 document.addEventListener('pointerdown',ripple);
