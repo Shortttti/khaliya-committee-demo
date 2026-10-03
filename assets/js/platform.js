@@ -499,14 +499,15 @@ async function rejectJoinRequest(uid){
 }
 async function removeOfficeMember(uid){
   if(profile.role!=='manager'||!profile.officeId||uid===user.uid)throw new Error('FORBIDDEN');
-  const officeId=profile.officeId,userRef=doc(db,'users',uid),teamRef=doc(db,'offices',officeId,'team',uid),notificationRef=doc(db,'offices',officeId,'notifications',makeId('NTF'));
+  const officeId=profile.officeId,userRef=doc(db,'users',uid),teamRef=doc(db,'offices',officeId,'team',uid),joinRef=doc(db,'offices',officeId,'joinRequests',uid),notificationRef=doc(db,'offices',officeId,'notifications',makeId('NTF'));
   await runTransaction(db,async tx=>{
-    const [officeSnap,targetSnap,teamSnap]=await Promise.all([tx.get(doc(db,'offices',officeId)),tx.get(userRef),tx.get(teamRef)]);
+    const [officeSnap,targetSnap,teamSnap,joinSnap]=await Promise.all([tx.get(doc(db,'offices',officeId)),tx.get(userRef),tx.get(teamRef),tx.get(joinRef)]);
     if(!officeSnap.exists()||!targetSnap.exists()||!teamSnap.exists())throw new Error('MEMBER_NOT_FOUND');
     const office=officeSnap.data(),target=targetSnap.data();
     if(office.ownerUid!==user.uid&&!office.managerUids?.includes(user.uid))throw new Error('FORBIDDEN');
     if(target.role==='manager'||target.officeId!==officeId)throw new Error('MEMBER_CANNOT_BE_REMOVED');
     tx.delete(teamRef);
+    if(joinSnap.exists()&&joinSnap.data().status==='accepted')tx.update(joinRef,{status:'removed',reviewedByUid:user.uid,reviewedAt:serverTimestamp()});
     if(target.role==='consultant')tx.delete(doc(db,'offices',officeId,'consultants',uid));
     tx.update(userRef,{officeId:'',officeName:'',projectIds:[],onboardingComplete:false,joinRequestStatus:'removed',updatedAt:serverTimestamp()});
     tx.set(notificationRef,{id:notificationRef.id,officeId,type:'member-removed',text:'تمت إزالة حسابك من '+(office.name||'المكتب'),recipientUid:uid,visibleTo:[uid],createdByUid:user.uid,createdAt:serverTimestamp(),readBy:[]});
