@@ -22,6 +22,7 @@ service cloud.firestore {
     }
     function canReadOfficeRecord(officeId) {
       return officeManager(officeId)
+        || (collectionName == 'consultants' && inOffice(officeId))
         || (inOffice(officeId) && visibleToMe()
           && (!('projectId' in resource.data) || resource.data.projectId == ''
             || projectMember(resource.data.projectId)));
@@ -104,6 +105,8 @@ service cloud.firestore {
               && managerOrProjectManager(officeId, request.resource.data.projectId))
             || (collectionName == 'team' && recordId == request.auth.uid
               && request.resource.data.uid == request.auth.uid)
+            || (collectionName == 'consultants' && recordId == request.auth.uid
+              && hasRole('consultant') && request.resource.data.uid == request.auth.uid)
             || (collectionName == 'chat'
               && (officeManager(officeId) || projectMember(request.resource.data.projectId))
               && request.resource.data.authorUid == request.auth.uid)
@@ -133,6 +136,9 @@ service cloud.firestore {
             || (collectionName == 'consultations'
               && (resource.data.requesterUid == request.auth.uid
                 || resource.data.consultantUid == request.auth.uid))
+            || (collectionName == 'consultants' && hasRole('consultant')
+              && resource.data.uid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['available', 'updatedAt']))
             || (collectionName == 'meetings'
               && managerOrProjectManager(officeId, resource.data.projectId))
             || (collectionName == 'chat' && resource.data.authorUid == request.auth.uid
