@@ -426,7 +426,7 @@ async function lookupUserByCode(code,expectedRole){
   return found;
 }
 async function reserveConsultantSlot({consultantUid,projectId,date,time,consultationId}){
-  if(!profile.officeId||!['client','engineer','pm'].includes(profile.role))throw new Error('FORBIDDEN');
+  if(!profile.officeId||!['manager','client','engineer','pm'].includes(profile.role))throw new Error('FORBIDDEN');
   if(!date||!time||!consultantUid)throw new Error('MISSING_APPOINTMENT');
   const slotId=String(consultantUid+'_'+date+'_'+time).replace(/[^a-zA-Z0-9_-]/g,'-');
   const slotRef=doc(db,'offices',profile.officeId,'consultantSlots',slotId);
