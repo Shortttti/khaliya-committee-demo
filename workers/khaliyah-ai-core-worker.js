@@ -297,6 +297,13 @@ async function handleFileUpload(request, env, user, requestId) {
   if (!request.body) throw httpError(400, 'File body is required');
 
   const name = sanitizeFileName(decodeURIComponent(request.headers.get('X-File-Name') || 'file'));
+  const kind = String(request.headers.get('X-Attachment-Kind') || 'document').toLowerCase();
+  const ext = extension(name);
+  const allowedImages = new Set(['png','jpg','jpeg','webp']);
+  const allowedDocuments = new Set(['pdf','doc','docx','xls','xlsx','csv','txt','md','ifc','dwg','dxf','rvt','pln','skp','zip']);
+  if (kind === 'image' && !allowedImages.has(ext)) throw httpError(415, 'Unsupported image type. Use PNG, JPG, or WebP.');
+  if (kind === 'document' && !allowedDocuments.has(ext)) throw httpError(415, 'Unsupported document type.');
+  if (!['image','document'].includes(kind)) throw httpError(400, 'Attachment kind must be image or document.');
   const projectId = safeId(request.headers.get('X-Project-Id') || 'unassigned');
   if (projectId !== 'unassigned') await authorizeProject(user, projectId);
   const sourceType = safeId(request.headers.get('X-Source-Type') || 'project-file');
@@ -313,6 +320,7 @@ async function handleFileUpload(request, env, user, requestId) {
       projectId,
       visibility,
       sourceType,
+      attachmentKind: kind,
       originalName: name,
       uploadedAt: new Date().toISOString()
     }
@@ -329,7 +337,8 @@ async function handleFileUpload(request, env, user, requestId) {
     officeId: scope.officeId,
     projectId,
     visibility,
-    sourceType
+    sourceType,
+    attachmentKind: kind
   });
 
   return json({ ok: true, requestId, fileId, key, queued: true }, 202, request);
@@ -685,7 +694,7 @@ function corsHeaders(request) {
     'Access-Control-Allow-Origin': origin,
     'Vary': 'Origin',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Authorization,Content-Type,X-File-Name,X-Project-Id,X-Office-Id,X-Visibility,X-Source-Type',
+    'Access-Control-Allow-Headers': 'Authorization,Content-Type,X-File-Name,X-Project-Id,X-Office-Id,X-Visibility,X-Source-Type,X-Attachment-Kind',
     'Access-Control-Max-Age': '86400',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer'
