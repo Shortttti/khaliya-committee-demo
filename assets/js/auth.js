@@ -1,3 +1,4 @@
+import './interactions.js?v=khaliya-motion-01';
 import { auth, db } from './firebase.js';
 import {
   createUserWithEmailAndPassword,

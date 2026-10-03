@@ -448,3 +448,86 @@ html[data-theme="dark"] .manager-welcome:after,html[data-theme="dark"] .manager-
 /* Full KHALIYA wordmark in the dark application sidebar */
 .brand{justify-content:center;min-height:70px;padding:5px 8px 16px}
 .sidebar-wordmark{display:block;width:min(164px,100%);height:auto;object-fit:contain}
+
+
+/* KHALIYA motion system */
+:root{--mouse-x:50vw;--mouse-y:45vh}
+body{
+  background:
+    radial-gradient(700px circle at var(--mouse-x) var(--mouse-y),rgba(79,151,111,.085),transparent 42%),
+    radial-gradient(900px circle at 12% 12%,rgba(199,175,104,.055),transparent 45%),
+    var(--canvas);
+  background-attachment:fixed;
+}
+.sidebar{
+  overflow:hidden;
+  background:
+    radial-gradient(120% 70% at 90% -10%,rgba(69,145,105,.35),transparent 50%),
+    radial-gradient(95% 80% at -10% 105%,rgba(196,165,91,.16),transparent 50%),
+    linear-gradient(155deg,#0b382c 0%,#0f4a38 48%,#0a352a 100%);
+  background-size:140% 140%;
+  animation:khaliyaSidebarFlow 12s ease-in-out infinite alternate;
+}
+.sidebar:before{content:"";position:absolute;inset:-35%;pointer-events:none;background:conic-gradient(from 100deg at 50% 50%,transparent 0 27%,rgba(255,255,255,.035) 36%,transparent 46% 100%);animation:khaliyaOrbit 18s linear infinite}
+.sidebar>*{position:relative;z-index:1}
+@keyframes khaliyaSidebarFlow{to{background-position:22% 78%}}
+@keyframes khaliyaOrbit{to{transform:rotate(360deg)}}
+
+.sidebar-account{padding:11px 8px 0;border-top:1px solid rgba(255,255,255,.12);display:grid;gap:9px}
+.sidebar-account .sidebar-user{border-top:0;padding:0;margin:0}
+.sidebar-identity-id{display:flex;align-items:center;gap:7px;padding:8px 8px 8px 9px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.055);box-shadow:inset 0 1px 0 rgba(255,255,255,.045)}
+.sidebar-identity-id>span{min-width:0;flex:1}
+.sidebar-identity-id small{display:block;color:#8eaa99;font:600 7px var(--font-en);letter-spacing:.9px;margin-bottom:2px}
+.sidebar-identity-id strong{display:block;color:#e8f2eb;font:600 7.4px var(--font-en);letter-spacing:.15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:left}
+.copy-id-btn{width:27px;height:27px;flex:0 0 auto;border:1px solid rgba(255,255,255,.13);border-radius:8px;background:rgba(255,255,255,.08);color:#c7ddce;display:grid;place-items:center;position:relative;overflow:hidden;transition:.28s cubic-bezier(.2,.75,.2,1)}
+.copy-id-btn svg{width:13px;height:13px}
+.copy-id-btn:hover{color:#fff;background:rgba(255,255,255,.15);transform:translateY(-2px) rotate(-2deg);box-shadow:0 8px 16px rgba(0,0,0,.14)}
+.copy-id-btn.copied{background:#d9c77d;color:#143d30;border-color:#e8d99e;transform:scale(1.05)}
+
+.topbar{transition:box-shadow .35s ease,background .35s ease,border-color .35s ease;backdrop-filter:blur(18px) saturate(1.25)}
+.is-scrolled .topbar{background:rgba(255,255,255,.82);box-shadow:0 12px 34px rgba(21,65,47,.075);border-bottom-color:rgba(98,135,110,.18)}
+.nav-link{position:relative;overflow:hidden;transition:transform .28s cubic-bezier(.2,.75,.2,1),background .28s ease,color .28s ease}
+.nav-link:before{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.07),transparent);transform:translateX(115%);transition:transform .55s ease}
+.nav-link:hover{transform:translateX(-3px)}
+.nav-link:hover:before{transform:translateX(-115%)}
+.nav-link[aria-current=page]{box-shadow:inset -2px 0 #d1bb76,0 8px 22px rgba(0,0,0,.08)}
+
+.panel,.today-project,.manager-welcome,.manager-project,.task-achievement{
+  position:relative;
+  overflow:hidden;
+  transform-style:preserve-3d;
+  transition:transform .42s cubic-bezier(.16,.84,.24,1),box-shadow .42s ease,border-color .3s ease;
+}
+.panel:after,.today-project:after,.manager-welcome:after,.manager-project:after,.task-achievement:after{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:radial-gradient(240px circle at var(--pointer-x,50%) var(--pointer-y,50%),rgba(69,145,105,.13),transparent 65%);
+  transition:opacity .25s ease;
+}
+.panel.pointer-active,.today-project.pointer-active,.manager-welcome.pointer-active,.manager-project.pointer-active,.task-achievement.pointer-active{
+  transform:perspective(1050px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg)) translateY(-4px);
+  box-shadow:0 18px 45px rgba(24,77,55,.115);
+  border-color:rgba(83,144,105,.28);
+}
+.panel.pointer-active:after,.today-project.pointer-active:after,.manager-welcome.pointer-active:after,.manager-project.pointer-active:after,.task-achievement.pointer-active:after{opacity:1}
+
+.btn,.icon-btn,.display-btn,.font-btn,.copy-id-btn{position:relative;overflow:hidden}
+.btn:before,.icon-btn:before,.display-btn:before,.font-btn:before{content:"";position:absolute;inset:-1px;background:linear-gradient(110deg,transparent 25%,rgba(255,255,255,.33) 48%,transparent 72%);transform:translateX(125%);transition:transform .65s ease;pointer-events:none}
+.btn:hover:before,.icon-btn:hover:before,.display-btn:hover:before,.font-btn:hover:before{transform:translateX(-125%)}
+.btn:hover,.icon-btn:hover,.display-btn:hover{box-shadow:0 9px 22px rgba(26,79,56,.1)}
+.motion-ripple{position:absolute;width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.14;pointer-events:none;transform:translate(-50%,-50%) scale(0);animation:khaliyaRipple .62s ease-out forwards}
+@keyframes khaliyaRipple{to{opacity:0;transform:translate(-50%,-50%) scale(22)}}
+
+.motion-reveal{opacity:0;transform:translateY(22px) scale(.985);filter:blur(5px);transition:opacity .72s cubic-bezier(.16,.84,.24,1) var(--reveal-delay,0ms),transform .72s cubic-bezier(.16,.84,.24,1) var(--reveal-delay,0ms),filter .72s ease var(--reveal-delay,0ms)}
+.motion-reveal.motion-in{opacity:1;transform:none;filter:none}
+.stat-value{transition:transform .35s ease,color .35s ease}.stat-card:hover .stat-value{transform:translateY(-2px) scale(1.045);color:var(--forest-700)}
+.attention-row,.data-table tbody tr{transition:transform .25s ease,background .25s ease,box-shadow .25s ease}
+.attention-row:hover{transform:translateX(-3px);background:rgba(239,247,241,.72);box-shadow:0 9px 20px rgba(27,77,56,.055)}
+.data-table tbody tr:hover{background:#f7fbf7}
+.page-heading h1{background:linear-gradient(100deg,#183d2c,#2d7252 48%,#94772f);background-size:180% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:khaliyaTitleShift 8s ease-in-out infinite alternate}
+@keyframes khaliyaTitleShift{to{background-position:100% 50%}}
+
+@media (prefers-reduced-motion:reduce){
+  .sidebar,.sidebar:before,.page-heading h1{animation:none!important}
+  .motion-reveal{opacity:1!important;transform:none!important;filter:none!important;transition:none!important}
+  .panel,.today-project,.manager-welcome,.manager-project,.task-achievement,.btn,.nav-link{transform:none!important;transition-duration:.01ms!important}
+}

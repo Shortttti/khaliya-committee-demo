@@ -99,3 +99,65 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .public-brand{display:inline-flex;align-items:center;min-width:0}
 .public-brand-logo{display:block;width:150px;max-height:66px;object-fit:contain}
 @media(max-width:760px){.public-brand-logo{width:125px;max-height:55px}}
+
+
+/* KHALIYA immersive motion */
+:root{--mouse-x:50vw;--mouse-y:45vh}
+body{
+  overflow-x:hidden;
+  background:
+    radial-gradient(760px circle at var(--mouse-x) var(--mouse-y),rgba(48,126,88,.07),transparent 42%),
+    #fff;
+}
+.site-header{transition:height .35s ease,box-shadow .35s ease,background .35s ease,border-color .35s ease;backdrop-filter:blur(18px) saturate(1.18)}
+.is-scrolled .site-header{background:rgba(255,255,255,.83);box-shadow:0 14px 42px rgba(18,60,49,.085);border-bottom-color:rgba(60,115,82,.15)}
+.hero{position:relative;isolation:isolate}
+.hero:before,.hero:after{content:"";position:absolute;z-index:-1;border-radius:999px;filter:blur(2px);pointer-events:none}
+.hero:before{width:440px;height:440px;right:-210px;top:-120px;background:radial-gradient(circle,rgba(44,126,87,.15),rgba(44,126,87,0) 68%);animation:khaliyaFloatA 9s ease-in-out infinite alternate}
+.hero:after{width:360px;height:360px;left:-170px;bottom:-90px;background:radial-gradient(circle,rgba(196,165,91,.14),rgba(196,165,91,0) 68%);animation:khaliyaFloatB 11s ease-in-out infinite alternate}
+@keyframes khaliyaFloatA{to{transform:translate(-34px,42px) scale(1.12)}}
+@keyframes khaliyaFloatB{to{transform:translate(46px,-28px) scale(.92)}}
+
+.hero-visual,.feature-card,.role-grid article,.auth-card{
+  position:relative;overflow:hidden;transform-style:preserve-3d;
+  transition:transform .46s cubic-bezier(.16,.84,.24,1),box-shadow .46s ease,border-color .32s ease;
+}
+.hero-visual:after,.feature-card:after,.role-grid article:after,.auth-card:after{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:radial-gradient(270px circle at var(--pointer-x,50%) var(--pointer-y,50%),rgba(47,133,92,.13),transparent 67%);
+  transition:opacity .25s ease
+}
+.hero-visual.pointer-active,.feature-card.pointer-active,.role-grid article.pointer-active,.auth-card.pointer-active{
+  transform:perspective(1100px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg)) translateY(-6px);
+  box-shadow:0 28px 66px rgba(20,69,48,.13)
+}
+.hero-visual.pointer-active:after,.feature-card.pointer-active:after,.role-grid article.pointer-active:after,.auth-card.pointer-active:after{opacity:1}
+.feature-card:hover,.role-grid article:hover{border-color:rgba(57,125,86,.26)}
+.hero-copy h1,.section-heading h2,.workflow-layout h2,.closing-cta h2{
+  background:linear-gradient(110deg,#18392b,#2b7350 48%,#a18439 78%,#18392b);
+  background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:khaliyaPublicTitle 10s ease-in-out infinite alternate
+}
+.security-band h2{background:none;-webkit-text-fill-color:initial;color:#fff;animation:none}
+@keyframes khaliyaPublicTitle{to{background-position:100% 50%}}
+
+.button{position:relative;overflow:hidden;transition:transform .28s cubic-bezier(.2,.75,.2,1),box-shadow .28s ease,background .28s ease}
+.button:before{content:"";position:absolute;inset:-1px;background:linear-gradient(110deg,transparent 23%,rgba(255,255,255,.48) 49%,transparent 75%);transform:translateX(125%);transition:transform .7s ease;pointer-events:none}
+.button:hover{transform:translateY(-3px) scale(1.015);box-shadow:0 13px 28px rgba(30,87,61,.14)}
+.button:hover:before{transform:translateX(-125%)}
+.motion-ripple{position:absolute;width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.16;pointer-events:none;transform:translate(-50%,-50%) scale(0);animation:khaliyaPublicRipple .62s ease-out forwards}
+@keyframes khaliyaPublicRipple{to{opacity:0;transform:translate(-50%,-50%) scale(22)}}
+
+.motion-reveal{opacity:0;transform:translateY(26px) scale(.982);filter:blur(6px);transition:opacity .78s cubic-bezier(.16,.84,.24,1) var(--reveal-delay,0ms),transform .78s cubic-bezier(.16,.84,.24,1) var(--reveal-delay,0ms),filter .78s ease var(--reveal-delay,0ms)}
+.motion-reveal.motion-in{opacity:1;transform:none;filter:none}
+.workflow-list li{transition:transform .3s ease,background .3s ease,padding .3s ease}.workflow-list li:hover{transform:translateX(-7px);background:linear-gradient(90deg,transparent,rgba(38,105,79,.045));padding-inline:11px}
+.closing-cta{position:relative;overflow:hidden}
+.closing-brand-mark{width:58px;height:58px;flex:0 0 58px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(145deg,#f2f7f2,#fff);border:1px solid #dde8df;box-shadow:0 12px 30px rgba(23,73,51,.09);overflow:hidden}
+.closing-brand-mark img{display:block;width:42px;height:42px;object-fit:contain;max-width:100%}
+.closing-cta:after{content:"";position:absolute;width:260px;height:260px;left:-120px;bottom:-160px;border-radius:50%;background:radial-gradient(circle,rgba(49,131,91,.11),transparent 68%);pointer-events:none}
+
+@media (prefers-reduced-motion:reduce){
+  .hero:before,.hero:after,.hero-copy h1,.section-heading h2,.workflow-layout h2,.closing-cta h2{animation:none!important}
+  .motion-reveal{opacity:1!important;transform:none!important;filter:none!important;transition:none!important}
+  .hero-visual,.feature-card,.role-grid article,.auth-card,.button{transform:none!important;transition-duration:.01ms!important}
+}
