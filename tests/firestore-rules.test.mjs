@@ -56,12 +56,12 @@ function joinPayload({ uid, email, role = 'engineer', officeId, code, userCode =
     managerUids: ['office-manager'], status: 'pending', createdAt: serverTimestamp()
   };
 }
-async function submitRequest({ uid, email, role = 'engineer', officeId, code }) {
+async function submitRequest({ uid, email, role = 'engineer', officeId, code, profileOfficeId = null }) {
   await testEnv.withSecurityRulesDisabled(async context => {
     const seedDb = context.firestore();
     await setDoc(doc(seedDb, 'users', uid), {
       uid, email, name: 'عضو ' + uid, role, userCode: 'KHL-' + uid,
-      officeId: '', officeName: '', projectIds: [], onboardingComplete: false
+      officeId: profileOfficeId, officeName: '', projectIds: [], onboardingComplete: false
     });
   });
   const db = testEnv.authenticatedContext(uid, { email }).firestore();
@@ -110,8 +110,8 @@ async function updateProfileMembership(db, uid, officeId) {
 
 test('one office invite accepts multiple join requests while membership waits for manager approval', async () => {
   const { officeId, code } = await seedOffice();
-  await submitRequest({ uid: 'engineer-one', email: 'one@example.com', officeId, code });
-  await submitRequest({ uid: 'engineer-two', email: 'two@example.com', officeId, code });
+  await submitRequest({ uid: 'engineer-one', email: 'one@example.com', role: 'pm', officeId, code, profileOfficeId: null });
+  await submitRequest({ uid: 'engineer-two', email: 'two@example.com', officeId, code, profileOfficeId: '' });
   const managerDb = testEnv.authenticatedContext('office-manager', { email: 'manager@example.com' }).firestore();
   const queue = await assertSucceeds(getDocs(query(
     collection(managerDb, 'offices', officeId, 'joinRequests'), where('officeId', '==', officeId)
@@ -122,7 +122,7 @@ test('one office invite accepts multiple join requests while membership waits fo
   assert.equal((await assertSucceeds(getDoc(doc(memberDb, 'offices', officeId, 'joinRequests', 'engineer-one')))).data().status, 'pending');
   await assertFails(getDoc(doc(memberDb, 'offices', officeId)));
   await assertFails(updateProfileMembership(memberDb, 'engineer-one', officeId));
-  await approveRequest({ uid: 'engineer-one', email: 'one@example.com', officeId, code });
+  await approveRequest({ uid: 'engineer-one', email: 'one@example.com', role: 'pm', officeId, code });
   assert.equal((await assertSucceeds(getDoc(doc(memberDb, 'users', 'engineer-one')))).data().officeId, officeId);
   assert.equal((await assertSucceeds(getDoc(doc(managerDb, 'offices', officeId, 'joinRequests', 'engineer-two')))).data().status, 'pending');
   assert.equal((await assertSucceeds(getDoc(doc(managerDb, 'offices', officeId, 'notifications', 'NTF-engineer-one')))).data().type, 'join-request');
