@@ -314,3 +314,61 @@ body{
 body:not(.page-entering) *{animation:none!important}
 body:not(.page-entering) .motion-ripple{animation:khaliyaPublicRipple .62s ease-out forwards!important}
 body:not(.page-entering) .motion-reveal{transition:opacity .78s cubic-bezier(.16,.84,.24,1) var(--reveal-delay,0ms),transform .78s cubic-bezier(.16,.84,.24,1) var(--reveal-delay,0ms),filter .78s ease var(--reveal-delay,0ms)!important}
+
+
+/* Onboarding brand refinement: compact header + subtle left watermark */
+.brand-mark img{
+  display:block;
+  width:30px;
+  height:30px;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+}
+.onboarding-page{
+  position:relative;
+  isolation:isolate;
+  overflow-x:hidden;
+}
+.onboarding-page::before{
+  content:"";
+  position:fixed;
+  z-index:-1;
+  left:-72px;
+  top:20vh;
+  width:430px;
+  height:430px;
+  background:url('../brand/khaliya-logo.png') center/contain no-repeat;
+  opacity:.045;
+  filter:saturate(.55) brightness(1.18);
+  pointer-events:none;
+}
+.onboarding-page .auth-header .brand-mark{
+  display:none;
+}
+.onboarding-page .auth-header .public-brand{
+  gap:0;
+}
+.onboarding-page .auth-header,
+.onboarding-page .onboarding-wrap{
+  position:relative;
+  z-index:1;
+}
+@media(max-width:900px){
+  .onboarding-page::before{
+    left:-115px;
+    top:25vh;
+    width:340px;
+    height:340px;
+    opacity:.035;
+  }
+}
+@media(max-width:680px){
+  .onboarding-page::before{
+    left:-120px;
+    top:32vh;
+    width:280px;
+    height:280px;
+    opacity:.03;
+  }
+}
