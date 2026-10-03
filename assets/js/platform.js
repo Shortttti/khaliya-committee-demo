@@ -1,7 +1,7 @@
 import { auth, db } from './firebase.js';
 import { bindCloudStore, getState, updateState, makeId } from './store.js?v=cloud-01';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const API_BASE='https://khaliyah-engineering-office.short-story-im.workers.dev';
 const MODULES=new Set([
@@ -320,6 +320,22 @@ async function lookupUserByCode(code,expectedRole){
   if(expectedRole&&found.role!==expectedRole)throw new Error('ROLE_MISMATCH');
   return found;
 }
+async function reserveConsultantSlot({consultantUid,projectId,date,time,consultationId}){
+  if(!profile.officeId||!['client','engineer','pm'].includes(profile.role))throw new Error('FORBIDDEN');
+  if(!date||!time||!consultantUid)throw new Error('MISSING_APPOINTMENT');
+  const slotId=String(consultantUid+'_'+date+'_'+time).replace(/[^a-zA-Z0-9_-]/g,'-');
+  const slotRef=doc(db,'offices',profile.officeId,'consultantSlots',slotId);
+  await runTransaction(db,async transaction=>{
+    const current=await transaction.get(slotRef);
+    if(current.exists())throw new Error('CONSULTANT_SLOT_TAKEN');
+    transaction.set(slotRef,{
+      id:slotId,officeId:profile.officeId,projectId,consultantUid,
+      requestedByUid:user.uid,consultationId,date,time,
+      visibleTo:[user.uid,consultantUid],createdAt:new Date().toISOString()
+    });
+  });
+  return slotId;
+}
 async function createInvite(email,role,projectIds=[]){
   if(profile.role!=='manager')throw new Error('FORBIDDEN');
   const normalized=String(email||'').trim().toLowerCase();
@@ -349,6 +365,7 @@ window.KHALIYA_PLATFORM=Object.freeze({
   lookupUserByCode,
   addProjectMembership,
   createInvite,
+  reserveConsultantSlot,
   currentContext,
   refreshToken:()=>auth.currentUser?.getIdToken(true),
   signOut:()=>signOut(auth)
