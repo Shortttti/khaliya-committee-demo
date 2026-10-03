@@ -3,11 +3,11 @@ import {
   collection, doc, deleteDoc, onSnapshot, query, setDoc, where, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
-const COLLECTIONS=['projects','tasks','changes','files','approvals','team','activity','notifications','clientRequests','consultations','decisions','meetings','schedule','timeline','quantities','chat','meetingRequests','consultants','consultantSlots','teams','visualProposals','invites'];
+const COLLECTIONS=['projects','tasks','changes','files','approvals','team','activity','notifications','clientRequests','consultations','decisions','meetings','schedule','timeline','quantities','chat','meetingRequests','consultants','consultantSlots','teams','visualProposals','invites','joinRequests'];
 const defaults=()=>({
   user:null,role:'engineer',language:'ar',projects:[],tasks:[],changes:[],files:[],
   approvals:[],team:[],activity:[],notifications:[],clientRequests:[],consultations:[],
-  decisions:[],meetings:[],schedule:[],timeline:[],quantities:[],chat:[],meetingRequests:[],consultants:[],consultantSlots:[],teams:[],visualProposals:[],invites:[],
+  decisions:[],meetings:[],schedule:[],timeline:[],quantities:[],chat:[],meetingRequests:[],consultants:[],consultantSlots:[],teams:[],visualProposals:[],invites:[],joinRequests:[],
   settings:{office:'',project:'',currency:'SAR',theme:'light',language:'ar',fontSize:'normal'}
 });
 let state=defaults(), profile=null, stop=[], writeQueue=Promise.resolve(), lastWriteError=null;
