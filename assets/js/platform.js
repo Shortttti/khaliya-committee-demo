@@ -1,7 +1,7 @@
 import { auth, db } from './firebase.js';
-import { bindCloudStore, getState, updateState, makeId, flushPendingWrites } from './store.js?v=khaliya-12';
+import { bindCloudStore, getState, updateState, updateLocalOfficeName, makeId, flushPendingWrites } from './store.js?v=khaliya-13';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, serverTimestamp, runTransaction, writeBatch } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const API_BASE='https://khaliyah-engineering-office.short-story-im.workers.dev';
 const MODULES=new Set([
@@ -113,12 +113,13 @@ async function updateOfficeSettings(values={}){
     officeEmail:String(values.officeEmail||'').trim(),
     updatedAt:serverTimestamp()
   };
-  await updateDoc(doc(db,'offices',profile.officeId),patch);
-  await updateDoc(doc(db,'users',user.uid),{officeName:name,updatedAt:serverTimestamp()});
+  const batch=writeBatch(db);
+  batch.update(doc(db,'offices',profile.officeId),patch);
+  batch.update(doc(db,'users',user.uid),{officeName:name,updatedAt:serverTimestamp()});
+  await batch.commit();
   profile={...profile,officeName:name};
   try{localStorage.setItem(profileCacheKey,JSON.stringify({savedAt:Date.now(),profile:cacheProfile(profile)}))}catch{}
-  updateState(state=>{state.settings.office=name;if(state.user)state.user.officeName=name});
-  await flushPendingWrites();
+  updateLocalOfficeName(name);
   return {...patch,officeId:profile.officeId};
 }
 

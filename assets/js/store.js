@@ -125,6 +125,14 @@ export function updateState(mutator){
   enqueueSync(before,state);
   return state;
 }
+export function updateLocalOfficeName(name){
+  const value=String(name||'');
+  state.settings.office=value;
+  if(state.user)state.user.officeName=value;
+  savePreferences();
+  emit();
+  return state;
+}
 export function makeId(prefix='KHL'){
   const compact=crypto.randomUUID().replaceAll('-','').slice(0,12).toUpperCase();
   return `${prefix}-${compact}`;
