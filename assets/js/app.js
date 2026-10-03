@@ -1,7 +1,7 @@
-import './shell.js?v=khaliya-01';
-import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses} from './store.js';
-import englishExtra from './english-extra.js?v=khaliya-01';
-import './interactions.js?v=khaliya-01';
+import './shell.js?v=khaliya-03';
+import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses} from './store.js?v=khaliya-03';
+import englishExtra from './english-extra.js?v=khaliya-03';
+import './interactions.js?v=khaliya-03';
 
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)], page=document.body.dataset.page||'overview';
 const content=$('#appContent');let aiPending=false;
