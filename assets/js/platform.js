@@ -1,5 +1,5 @@
 import { auth, db } from './firebase.js';
-import { bindCloudStore, getState, updateState, makeId } from './store.js?v=khaliya-07';
+import { bindCloudStore, getState, updateState, makeId } from './store.js?v=khaliya-09';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
@@ -44,22 +44,56 @@ if(!user){
   await new Promise(()=>{});
 }
 
+const PROFILE_CACHE_PREFIX='khaliya.profile.v2:';
+const PROFILE_CACHE_MAX_AGE=12*60*60*1000;
+const profileCacheKey=PROFILE_CACHE_PREFIX+user.uid;
+const cacheProfile=value=>({
+  uid:value.uid||user.uid,email:value.email||user.email||'',name:value.name||'',phone:value.phone||'',
+  role:value.role||'',officeId:value.officeId||null,officeName:value.officeName||'',
+  projectIds:Array.isArray(value.projectIds)?value.projectIds:[],userCode:value.userCode||'',
+  onboardingComplete:value.onboardingComplete!==false,specialty:value.specialty||''
+});
+const validRole=value=>['manager','pm','engineer','client','consultant'].includes(value?.role);
 let profile={uid:user.uid,email:user.email||'',role:'',officeId:null,projectIds:[]};
+let usedCachedProfile=false;
+try{
+  const cached=JSON.parse(localStorage.getItem(profileCacheKey)||'null');
+  if(cached?.profile?.uid===user.uid&&validRole(cached.profile)&&cached.profile.officeId&&Date.now()-Number(cached.savedAt||0)<PROFILE_CACHE_MAX_AGE){
+    profile={...profile,...cached.profile};
+    bindCloudStore(profile);
+    usedCachedProfile=true;
+    window.dispatchEvent(new Event('khaliya:platform-ready'));
+  }
+}catch{}
+
 try{
   const snap=await getDoc(doc(db,'users',user.uid));
   if(!snap.exists())throw new Error('PROFILE_NOT_FOUND');
-  profile={...profile,...snap.data()};
-  if(!['manager','pm','engineer','client','consultant'].includes(profile.role))throw new Error('INVALID_PROFILE_ROLE');
-  if(profile.onboardingComplete===false||!profile.officeId){
+  const fresh={...profile,...snap.data(),uid:user.uid,email:user.email||snap.data().email||''};
+  if(!validRole(fresh))throw new Error('INVALID_PROFILE_ROLE');
+  if(fresh.onboardingComplete===false||!fresh.officeId)throw new Error('ONBOARDING_REQUIRED');
+  const compact=cacheProfile(fresh);
+  const changed=!usedCachedProfile||JSON.stringify(cacheProfile(profile))!==JSON.stringify(compact);
+  profile=fresh;
+  try{localStorage.setItem(profileCacheKey,JSON.stringify({savedAt:Date.now(),profile:compact}))}catch{}
+  if(changed)bindCloudStore(profile);
+  if(!usedCachedProfile||changed)window.dispatchEvent(new Event('khaliya:platform-ready'));
+}catch(error){
+  console.error('KHALIYA profile unavailable',error);
+  if(error?.message==='ONBOARDING_REQUIRED'){
+    try{localStorage.removeItem(profileCacheKey)}catch{}
     location.replace('onboarding.html');
     await new Promise(()=>{});
   }
-  bindCloudStore(profile);
-  window.dispatchEvent(new Event('khaliya:platform-ready'));
-}catch(error){
-  console.error('KHALIYA profile unavailable',error);
-  location.replace('login.html?error=profile');
-  await new Promise(()=>{});
+  if(error?.message==='PROFILE_NOT_FOUND'||error?.message==='INVALID_PROFILE_ROLE'){
+    try{localStorage.removeItem(profileCacheKey)}catch{}
+    location.replace('login.html?error=profile');
+    await new Promise(()=>{});
+  }
+  if(!usedCachedProfile){
+    location.replace('login.html?error=profile');
+    await new Promise(()=>{});
+  }
 }
 
 async function token(){

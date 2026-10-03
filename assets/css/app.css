@@ -648,3 +648,86 @@ body:not(.page-entering) .motion-ripple{animation:khaliyaRipple .62s ease-out fo
 body:not(.page-entering) .motion-reveal{transition:opacity .72s cubic-bezier(.16,.84,.24,1) var(--reveal-delay,0ms),transform .72s cubic-bezier(.16,.84,.24,1) var(--reveal-delay,0ms),filter .72s ease var(--reveal-delay,0ms)!important}
 body:not(.page-entering) .modal-backdrop.open .modal{animation:khaliyaModalSpring .42s cubic-bezier(.16,.84,.24,1) both!important}
 body:not(.page-entering) .toast{animation:khaliyaToastIn .42s cubic-bezier(.16,.84,.24,1)!important}
+
+
+/* KHALIYA workspace density pass — use the canvas, remove dead space */
+.content{
+  width:100%;
+  max-width:none!important;
+  margin:0;
+  padding-inline:clamp(20px,2.6vw,44px);
+}
+.task-achievement,
+.manager-workspace,
+.focus-grid,
+.engineer-layout,
+.engineer-summary,
+.client-overview-grid,
+.consult-specialties,
+.consult-columns,
+.settings-layout{
+  width:100%!important;
+  max-width:none!important;
+}
+.task-achievement{margin-inline:0!important}
+.page-heading,.filter-bar,.panel,.table-wrap{max-width:none}
+@media(min-width:1200px){
+  .content{padding-inline:clamp(30px,3vw,56px)}
+}
+@media(max-width:760px){
+  .content{padding-inline:14px}
+}
+
+/* Fast boot: never block navigation with a large loading card */
+[data-app-fallback]{
+  max-width:none!important;
+  width:100%!important;
+  height:4px!important;
+  min-height:4px!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:999px!important;
+  box-shadow:none!important;
+  background:#e7efea!important;
+  color:transparent!important;
+  overflow:hidden!important;
+}
+[data-app-fallback]>*:not(div){display:none!important}
+[data-app-fallback]>div{
+  height:4px!important;
+  margin:0!important;
+  border-radius:999px!important;
+  background:linear-gradient(90deg,#1f7a55 0%,#73b591 46%,#d8bf72 72%,#1f7a55 100%)!important;
+  background-size:220% 100%!important;
+  animation:khaliyaBootSlide .85s linear infinite!important;
+}
+.workspace-boot{
+  height:4px;
+  width:100%;
+  display:flex;
+  gap:4px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#e8efeb;
+}
+.workspace-boot i{
+  flex:1;
+  border-radius:999px;
+  background:linear-gradient(90deg,#dfe9e3,#7ab797,#d7bd70,#dfe9e3);
+  background-size:220% 100%;
+  animation:khaliyaBootSlide .85s linear infinite!important;
+}
+.workspace-boot i:nth-child(2){animation-delay:.08s!important}
+.workspace-boot i:nth-child(3){animation-delay:.16s!important}
+@keyframes khaliyaBootSlide{to{background-position:-220% 0}}
+@media(prefers-reduced-motion:reduce){
+  [data-app-fallback]>div,.workspace-boot i{animation:none!important;background:#b9d5c5!important}
+}
+
+
+/* Faster navigation feel */
+body.page-entering .main-shell,
+body.page-entering .sidebar{
+  animation-duration:.18s!important;
+}
