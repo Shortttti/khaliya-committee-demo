@@ -78,7 +78,7 @@ service cloud.firestore {
           || (request.resource.data.officeId is string
             && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)).data.ownerUid == uid)
           || (request.resource.data.inviteCode is string
-            && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.acceptedBy == uid
+            && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.get('acceptedBy', '') == uid
             && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.officeId == request.resource.data.officeId
             && inviteEmailMatches(getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.email)
             && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.role == request.resource.data.role)
@@ -86,7 +86,7 @@ service cloud.firestore {
         && (request.resource.data.projectIds == resource.data.get('projectIds', [])
           || managerCompletingOwnedOffice(uid)
           || (request.resource.data.inviteCode is string
-            && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.acceptedBy == uid));
+            && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.get('acceptedBy', '') == uid));
       allow update: if signedIn()
         && me().role == 'manager'
         && (me().officeId == resource.data.officeId
@@ -100,7 +100,10 @@ service cloud.firestore {
       allow delete: if false;
       allow update: if signedIn()
         && me().role == 'manager'
-        && me().officeId == resource.data.officeId
+        && (me().officeId == resource.data.officeId
+          || (resource.data.officeId == ''
+            && request.resource.data.officeId == me().officeId
+            && getAfter(/databases/$(database)/documents/offices/$(me().officeId)/joinRequests/$(uid)).data.status == 'accepted'))
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.email == resource.data.email
         && request.resource.data.role == resource.data.role
