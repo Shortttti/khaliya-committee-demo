@@ -39,6 +39,9 @@ service cloud.firestore {
           && (resource.data.requestedByUid == request.auth.uid || resource.data.consultantUid == request.auth.uid))
         || (collectionName == 'consultations' && inOffice(officeId)
           && resource.data.consultantUid == request.auth.uid)
+        || (collectionName == 'files' && inOffice(officeId) && visibleToMe()
+          && resource.data.consultationId is string
+          && get(/databases/$(database)/documents/offices/$(officeId)/consultations/$(resource.data.consultationId)).data.consultantUid == request.auth.uid)
         || (inOffice(officeId) && visibleToMe()
           && (!('projectId' in resource.data) || resource.data.projectId == ''
             || projectMember(resource.data.projectId)));
@@ -116,8 +119,8 @@ service cloud.firestore {
               && projectMember(request.resource.data.projectId)
               && request.resource.data.ownerUid == request.auth.uid)
             || (collectionName == 'consultantSlots'
-              && me().role in ['client', 'engineer', 'pm']
-              && projectMember(request.resource.data.projectId)
+              && me().role in ['manager', 'client', 'engineer', 'pm']
+              && managerOrProjectManager(officeId, request.resource.data.projectId)
               && request.resource.data.requestedByUid == request.auth.uid
               && get(/databases/$(database)/documents/offices/$(officeId)/consultants/$(request.resource.data.consultantUid)).data.available == true
               && !exists(/databases/$(database)/documents/offices/$(officeId)/consultantSlots/$(recordId)))
@@ -130,7 +133,7 @@ service cloud.firestore {
             || (collectionName == 'consultations'
               && me().role in ['client', 'engineer', 'pm', 'manager']
               && request.resource.data.requesterUid == request.auth.uid
-              && projectMember(request.resource.data.projectId))
+              && managerOrProjectManager(officeId, request.resource.data.projectId))
             || (collectionName in ['tasks', 'decisions', 'quantities', 'meetings', 'changes']
               && managerOrProjectManager(officeId, request.resource.data.projectId))
             || (collectionName == 'activity'
@@ -189,8 +192,8 @@ service cloud.firestore {
               && get(/databases/$(database)/documents/offices/$(officeId)/tasks/$(resource.data.taskId)).data.assigneeUid == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedByUid', 'reviewedAt', 'updatedAt']))
             || (collectionName == 'consultations'
-              && (resource.data.requesterUid == request.auth.uid
-                || resource.data.consultantUid == request.auth.uid))
+              && resource.data.consultantUid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'consultantNote', 'updatedAt']))
             || (collectionName == 'consultants' && hasRole('consultant')
               && resource.data.uid == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['available', 'updatedAt']))

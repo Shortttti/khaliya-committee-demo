@@ -297,9 +297,17 @@ async function handleFileUpload(request, env, user, requestId) {
   if (!request.body) throw httpError(400, 'File body is required');
 
   const name = sanitizeFileName(decodeURIComponent(request.headers.get('X-File-Name') || 'file'));
+  const kind = String(request.headers.get('X-Attachment-Kind') || 'document').toLowerCase();
+  const ext = extension(name);
+  const allowedImages = new Set(['png','jpg','jpeg','webp']);
+  const allowedDocuments = new Set(['pdf','doc','docx','xls','xlsx','csv','txt','md','ifc','dwg','dxf','rvt','pln','skp','zip']);
+  if (kind === 'image' && !allowedImages.has(ext)) throw httpError(415, 'Unsupported image type. Use PNG, JPG, or WebP.');
+  if (kind === 'document' && !allowedDocuments.has(ext)) throw httpError(415, 'Unsupported document type.');
+  if (!['image','document'].includes(kind)) throw httpError(400, 'Attachment kind must be image or document.');
   const projectId = safeId(request.headers.get('X-Project-Id') || 'unassigned');
   if (projectId !== 'unassigned') await authorizeProject(user, projectId);
   const sourceType = safeId(request.headers.get('X-Source-Type') || 'project-file');
+  const consultationId = safeId(request.headers.get('X-Consultation-Id') || '');
   const visibility = normalizeVisibility(request.headers.get('X-Visibility') || 'internal', user.profile);
   const scope = resolveScope(user, { officeId: request.headers.get('X-Office-Id') || '' }, { requireOffice: false });
   const fileId = crypto.randomUUID();
@@ -313,6 +321,8 @@ async function handleFileUpload(request, env, user, requestId) {
       projectId,
       visibility,
       sourceType,
+      attachmentKind: kind,
+      consultationId,
       originalName: name,
       uploadedAt: new Date().toISOString()
     }
@@ -329,7 +339,8 @@ async function handleFileUpload(request, env, user, requestId) {
     officeId: scope.officeId,
     projectId,
     visibility,
-    sourceType
+    sourceType,
+    attachmentKind: kind
   });
 
   return json({ ok: true, requestId, fileId, key, queued: true }, 202, request);
@@ -346,9 +357,17 @@ async function resolveAuthorizedFile(request, env, user) {
     if (!object || object.customMetadata?.uid !== user.uid) throw httpError(404, 'File not found');
     return { key, object };
   }
-  await authorizeProject(user, projectId);
   const object = await env.PROJECT_FILES.get(key);
   if (!object) throw httpError(404, 'File not found');
+  try {
+    await authorizeProject(user, projectId);
+  } catch (error) {
+    const consultationId = String(object.customMetadata?.consultationId || '');
+    if (error.status !== 403 || !consultationId) throw error;
+    const consultation = await firestoreGet(`offices/${encodeURIComponent(officeId)}/consultations/${encodeURIComponent(consultationId)}`, user.token, false);
+    const fields = firestoreFieldsToJs(consultation?.fields || {});
+    if (!consultation || ![fields.requesterUid, fields.consultantUid].includes(user.uid)) throw httpError(403, 'You do not have access to this consultation attachment');
+  }
   const allowed = allowedKnowledgeVisibilities(user.profile);
   if (!allowed.includes(String(object.customMetadata?.visibility || 'internal'))) throw httpError(403, 'File is not shared with this role');
   return { key, object };
@@ -685,7 +704,7 @@ function corsHeaders(request) {
     'Access-Control-Allow-Origin': origin,
     'Vary': 'Origin',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Authorization,Content-Type,X-File-Name,X-Project-Id,X-Office-Id,X-Visibility,X-Source-Type',
+    'Access-Control-Allow-Headers': 'Authorization,Content-Type,X-File-Name,X-Project-Id,X-Office-Id,X-Visibility,X-Source-Type,X-Attachment-Kind,X-Consultation-Id',
     'Access-Control-Max-Age': '86400',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer'

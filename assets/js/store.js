@@ -1,6 +1,6 @@
 import { auth, db } from './firebase.js';
 import {
-  collection, doc, deleteDoc, onSnapshot, query, setDoc, where, serverTimestamp
+  collection, doc, deleteDoc, onSnapshot, query, setDoc, where, serverTimestamp, writeBatch
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const COLLECTIONS=['projects','tasks','changes','files','approvals','team','activity','notifications','clientRequests','consultations','decisions','meetings','schedule','timeline','quantities','chat','meetingRequests','consultants','consultantSlots','teams','visualProposals','invites'];
@@ -10,7 +10,7 @@ const defaults=()=>({
   decisions:[],meetings:[],schedule:[],timeline:[],quantities:[],chat:[],meetingRequests:[],consultants:[],consultantSlots:[],teams:[],visualProposals:[],invites:[],
   settings:{office:'',project:'',currency:'SAR',theme:'light',language:'ar',fontSize:'normal'}
 });
-let state=defaults(), profile=null, stop=[], writeQueue=Promise.resolve();
+let state=defaults(), profile=null, stop=[], writeQueue=Promise.resolve(), stateRevision=0;
 
 const clone=value=>structuredClone(value);
 const localKey=uid=>'khaliya.workspace.v3:'+uid;
@@ -28,13 +28,13 @@ function normalize(row,id){
   return value;
 }
 function canSync(){return !!(profile?.uid&&profile?.officeId)}
-function collectionPath(name){return name==='invites'?collection(db,'publicInvites'):collection(db,'offices',profile.officeId,name)}
-function wire(row,id,name){
-  const value={...row,id,officeId:profile.officeId,updatedAt:serverTimestamp()};
+function collectionPath(name,officeId=profile.officeId){return name==='invites'?collection(db,'publicInvites'):collection(db,'offices',officeId,name)}
+function wire(row,id,name,owner=profile){
+  const value={...row,id,officeId:owner.officeId,updatedAt:serverTimestamp()};
   if(value.project&&!value.projectId)value.projectId=value.project;
   if(name==='projects')value.projectId=id;
   delete value.project;
-  value.visibleTo=Array.isArray(value.visibleTo)&&value.visibleTo.length?Array.from(new Set(value.visibleTo.map(String))):[profile.uid];
+  value.visibleTo=Array.isArray(value.visibleTo)&&value.visibleTo.length?Array.from(new Set(value.visibleTo.map(String))):[owner.uid];
   return value;
 }
 function roleQuery(name){
@@ -46,17 +46,37 @@ function roleQuery(name){
   if(profile.role==='consultant'&&name==='consultantSlots')return query(ref,where('consultantUid','==',profile.uid));
   return query(ref,where('visibleTo','array-contains',profile.uid));
 }
-function enqueueSync(before,after){
-  const run=()=>syncChanges(before,after);
-  writeQueue=writeQueue.then(run,run).catch(error=>{
+function rollbackFailedWrite(before,after){
+  const restored=clone(state);
+  for(const name of COLLECTIONS){
+    const prior=Array.isArray(before[name])?before[name]:[],attempted=Array.isArray(after[name])?after[name]:[],current=Array.isArray(restored[name])?restored[name]:[];
+    const oldMap=new Map(prior.map((row,index)=>[idOf(row,index),row])),newMap=new Map(attempted.map((row,index)=>[idOf(row,index),row]));
+    for(const [id,nextRow] of newMap){
+      if(JSON.stringify(oldMap.get(id))===JSON.stringify(nextRow))continue;
+      const position=current.findIndex((row,index)=>idOf(row,index)===id);
+      if(position<0||JSON.stringify(current[position])!==JSON.stringify(nextRow))continue;
+      if(oldMap.has(id))current[position]=clone(oldMap.get(id));else current.splice(position,1);
+    }
+    restored[name]=current;
+  }
+  state=restored;savePreferences();emit();
+}
+function enqueueSync(before,after,revision){
+  const owner={uid:profile?.uid||'',officeId:profile?.officeId||''};
+  const run=()=>syncChanges(before,after,owner);
+  const pending=writeQueue.then(run,run);
+  writeQueue=pending;
+  pending.catch(error=>{
+    if(stateRevision===revision)rollbackFailedWrite(before,after);
     console.error('KHALIYA Firestore write failed',error);
     window.dispatchEvent(new CustomEvent('khaliya:data-error',{detail:{operation:'write',error}}));
   });
-  return writeQueue;
+  return pending;
 }
-async function syncChanges(before,after){
-  if(!canSync())throw new Error('يجب ربط الحساب بمكتب قبل حفظ بيانات المشروع.');
-  const writes=[];
+export function flushPendingWrites(){return writeQueue}
+async function syncChanges(before,after,owner){
+  if(!owner?.uid||!owner?.officeId)throw new Error('يجب ربط الحساب بمكتب قبل حفظ بيانات المشروع.');
+  const batch=writeBatch(db);let operations=0;
   for(const name of COLLECTIONS){
     if(name==='invites')continue;
     const prev=Array.isArray(before[name])?before[name]:[];
@@ -65,11 +85,12 @@ async function syncChanges(before,after){
     const nextMap=new Map(next.map((row,index)=>[idOf(row,index),row]));
     for(const [id,row] of nextMap){
       if(JSON.stringify(oldMap.get(id))===JSON.stringify(row))continue;
-      writes.push(setDoc(doc(collectionPath(name),id),wire(row,id,name)));
+      batch.set(doc(collectionPath(name,owner.officeId),id),wire(row,id,name,owner));operations++;
     }
-    for(const id of oldMap.keys())if(!nextMap.has(id))writes.push(deleteDoc(doc(collectionPath(name),id)));
+    for(const id of oldMap.keys())if(!nextMap.has(id)){batch.delete(doc(collectionPath(name,owner.officeId),id));operations++}
   }
-  await Promise.all(writes);
+  if(operations>450)throw new Error('عدد التغييرات كبير جدًا لحفظه دفعة واحدة. قسّم العملية ثم أعد المحاولة.');
+  if(operations)await batch.commit();
 }
 function watchWorkspace(){
   stop.forEach(unsub=>unsub());stop=[];
@@ -89,7 +110,7 @@ function watchWorkspace(){
 }
 export function bindCloudStore(nextProfile){
   profile={...nextProfile,uid:nextProfile?.uid||auth.currentUser?.uid||''};
-  stop.forEach(unsub=>unsub());stop=[];
+  stateRevision++;stop.forEach(unsub=>unsub());stop=[];
   const saved=profile.uid?JSON.parse(localStorage.getItem(localKey(profile.uid))||'{}'):{};
   state={...defaults(),settings:{...defaults().settings,...saved.settings},user:nextProfile?.name?{
     uid:profile.uid,userCode:nextProfile.userCode||`KHL-${profile.uid}`,name:nextProfile.name,
@@ -101,13 +122,13 @@ export function bindCloudStore(nextProfile){
 }
 export function getState(){return state}
 export function saveState(next){
-  const before=clone(state);state=next;savePreferences();emit();
-  enqueueSync(before,state);
+  const before=clone(state);state=next;const revision=++stateRevision;savePreferences();emit();
+  enqueueSync(before,clone(state),revision);
   return state;
 }
 export function updateState(mutator){
-  const before=clone(state);mutator(state);savePreferences();emit();
-  enqueueSync(before,state);
+  const before=clone(state);mutator(state);const revision=++stateRevision;savePreferences();emit();
+  enqueueSync(before,clone(state),revision);
   return state;
 }
 export function makeId(prefix='KHL'){

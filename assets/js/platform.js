@@ -1,7 +1,7 @@
 import { auth, db } from './firebase.js';
 import { bindCloudStore, getState, updateState, makeId } from './store.js?v=khaliya-10';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const API_BASE='https://khaliyah-engineering-office.short-story-im.workers.dev';
 const MODULES=new Set([
@@ -133,15 +133,24 @@ async function uploadFile(file,options={}){
   if(!(file instanceof File))throw new Error('File is required');
   const workspace=getState(),project=workspace.projects.find(item=>item.id===options.projectId);
   const visibleTo=[...new Set([user.uid,...(project?.visibleTo||[]),...(project?.managerUids||[]),...(project?.officeManagerUids||[]),project?.clientUid].filter(Boolean))];
-  const headers={
-    'Content-Type':file.type||'application/octet-stream',
-    'X-File-Name':encodeURIComponent(file.name),
-    'X-Project-Id':options.projectId||'unassigned',
-    'X-Visibility':options.visibility||'internal',
-    'X-Source-Type':options.sourceType||'project-file'
-  };
+  const headers={'Content-Type':file.type||'application/octet-stream','X-File-Name':encodeURIComponent(file.name),'X-Project-Id':options.projectId||'unassigned','X-Visibility':options.visibility||'internal','X-Source-Type':options.sourceType||'project-file','X-Attachment-Kind':options.kind||'document'};
   if(options.officeId)headers['X-Office-Id']=options.officeId;
-  const result=await api('/api/files/upload',{body:file,headers});
+  if(options.consultationId)headers['X-Consultation-Id']=options.consultationId;
+  const idToken=await token();
+  const result=await new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();xhr.open('POST',API_BASE+'/api/files/upload');xhr.timeout=120000;
+    xhr.setRequestHeader('Authorization','Bearer '+idToken);
+    Object.entries(headers).forEach(([key,value])=>xhr.setRequestHeader(key,value));
+    xhr.upload.onprogress=event=>{if(options.onProgress)options.onProgress(event.loaded,event.lengthComputable?event.total:file.size)};
+    xhr.onerror=()=>reject(new Error('تعذر الاتصال بخدمة رفع الملفات.'));
+    xhr.ontimeout=()=>reject(new Error('انتهت مهلة رفع الملف. تحقق من الاتصال ثم أعد المحاولة.'));
+    xhr.onload=()=>{
+      let data;try{data=JSON.parse(xhr.responseText||'{}')}catch{data={error:xhr.responseText||'استجابة غير مفهومة من خدمة الرفع.'}}
+      if(xhr.status<200||xhr.status>=300){const error=new Error(data.error||'تعذر رفع الملف.');error.status=xhr.status;error.data=data;reject(error);return}
+      resolve(data)
+    };
+    xhr.send(file)
+  });
   return {...result,storageKey:result.storageKey||result.key||'',fileId:result.fileId||'',visibleTo,ownerUid:user.uid,project};
 }
 
@@ -379,7 +388,7 @@ async function lookupUserByCode(code,expectedRole){
   return found;
 }
 async function reserveConsultantSlot({consultantUid,projectId,date,time,consultationId}){
-  if(!profile.officeId||!['client','engineer','pm'].includes(profile.role))throw new Error('FORBIDDEN');
+  if(!profile.officeId||!['manager','client','engineer','pm'].includes(profile.role))throw new Error('FORBIDDEN');
   if(!date||!time||!consultantUid)throw new Error('MISSING_APPOINTMENT');
   const slotId=String(consultantUid+'_'+date+'_'+time).replace(/[^a-zA-Z0-9_-]/g,'-');
   const slotRef=doc(db,'offices',profile.officeId,'consultantSlots',slotId);
@@ -393,6 +402,13 @@ async function reserveConsultantSlot({consultantUid,projectId,date,time,consulta
     });
   });
   return slotId;
+}
+async function releaseConsultantSlot(slotId){
+  if(!profile.officeId||!slotId)throw new Error('MISSING_SLOT');
+  const slotRef=doc(db,'offices',profile.officeId,'consultantSlots',slotId),snapshot=await getDoc(slotRef);
+  if(!snapshot.exists())return;
+  if(snapshot.data().requestedByUid!==user.uid)throw new Error('FORBIDDEN');
+  await deleteDoc(slotRef);
 }
 async function createInvite(email,role,projectIds=[]){
   if(profile.role!=='manager')throw new Error('FORBIDDEN');
@@ -428,6 +444,7 @@ window.KHALIYA_PLATFORM=Object.freeze({
   addProjectMembership,
   createInvite,
   reserveConsultantSlot,
+  releaseConsultantSlot,
   currentContext,
   refreshToken:()=>auth.currentUser?.getIdToken(true),
   signOut:()=>signOut(auth)
