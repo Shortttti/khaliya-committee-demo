@@ -1,7 +1,7 @@
 import { auth, db } from './firebase.js';
 import { bindCloudStore, getState, updateState, makeId } from './store.js?v=cloud-01';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { doc, getDoc, updateDoc, arrayUnion } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const API_BASE='https://khaliyah-engineering-office.short-story-im.workers.dev';
 const MODULES=new Set([
@@ -317,6 +317,18 @@ async function lookupUserByCode(code,expectedRole){
   if(expectedRole&&found.role!==expectedRole)throw new Error('ROLE_MISMATCH');
   return found;
 }
+async function createInvite(email,role,projectIds=[]){
+  if(profile.role!=='manager')throw new Error('FORBIDDEN');
+  const normalized=String(email||'').trim().toLowerCase();
+  if(!normalized||!['pm','engineer','client','consultant'].includes(role))throw new Error('INVALID_INVITE');
+  const code='KHL-'+crypto.randomUUID().replaceAll('-','').slice(0,10).toUpperCase();
+  await setDoc(doc(db,'publicInvites',code),{
+    officeId:profile.officeId,officeName:profile.officeName||'',
+    email:normalized,role,projectIds,createdByUid:user.uid,
+    status:'pending',createdAt:serverTimestamp()
+  });
+  return code;
+}
 async function addProjectMembership(uid,projectId){
   if(profile.role!=='manager')throw new Error('FORBIDDEN');
   const snap=await getDoc(doc(db,'users',uid));
@@ -333,6 +345,7 @@ window.KHALIYA_PLATFORM=Object.freeze({
   indexText,
   lookupUserByCode,
   addProjectMembership,
+  createInvite,
   currentContext,
   refreshToken:()=>auth.currentUser?.getIdToken(true),
   signOut:()=>signOut(auth)
