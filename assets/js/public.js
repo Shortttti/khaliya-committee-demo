@@ -1,87 +1,158 @@
 import { auth, db } from './firebase.js';
-import { doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
-const $=(s,r=document)=>r.querySelector(s);
+const $=(selector,root=document)=>root.querySelector(selector);
 const params=new URLSearchParams(location.search);
-if(document.querySelector('[data-auth="signup"]')&&params.get('role')){const choice=document.querySelector(`[name="role"][value="${params.get('role')}"]`);if(choice)choice.checked=true}
-const roles={manager:{label:'مكتب هندسي',name:'جوري العروي',initial:'ج',office:'مكتب أفق للاستشارات'},pm:{label:'مدير مشروع',name:'سارة الحربي',initial:'س',office:'مكتب أفق للاستشارات'},engineer:{label:'مهندس',name:'أحمد السالم',initial:'أ',office:'مكتب أفق للاستشارات'},client:{label:'عميل',name:'شركة أفق للتطوير',initial:'أ',office:'شركة أفق للتطوير'}};
-function goWorkspace(role){const u=roles[role]||roles.manager;try{const key='nawa.workspace.v2';const current=JSON.parse(localStorage.getItem(key)||'{}');const saved=current.user?.role===role?current.user:null;const name=sessionStorage.getItem('nawa-onboarding-name')||saved?.name||u.name;current.user={...(saved||{}),name,initial:name.trim().slice(0,1)||u.initial,role};if(role==='manager'&&sessionStorage.getItem('nawa-onboarding-role')==='manager'){const office=sessionStorage.getItem('nawa-onboarding-office');if(office)current.settings={...(current.settings||{}),office}}localStorage.setItem(key,JSON.stringify(current));sessionStorage.setItem('nawa-demo-session','1')}catch{}location.href=role==='client'?'client.html':'home.html'}
-document.querySelector('[data-nav-toggle]')?.addEventListener('click',()=>document.body.classList.toggle('nav-open'));
-document.querySelectorAll('.site-nav a[href^="#"]').forEach(a=>a.addEventListener('click',()=>document.body.classList.remove('nav-open')));
-document.querySelector('[data-forgot]')?.addEventListener('click',e=>{e.preventDefault();const f=e.currentTarget.closest('form'),feedback=$('.form-feedback',f);feedback.textContent='استعادة كلمة المرور تتطلب تفعيل خدمة البريد في نسخة الخادم.'});
-document.querySelector('[data-auth="login"]')?.addEventListener('submit',e=>{e.preventDefault();let role='manager';try{role=JSON.parse(localStorage.getItem('nawa.workspace.v2')||'{}').user?.role||role}catch{}goWorkspace(role)});
-document.querySelector('[data-auth="signup"]')?.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(e.currentTarget),role=f.get('role')||'manager',u=roles[role];try{const state=JSON.parse(localStorage.getItem('nawa.workspace.v2')||'{}');state.user={name:f.get('name')||u.name,initial:(f.get('name')||u.name).trim().slice(0,1),role};if(role==='manager')state.settings={...(state.settings||{}),office:''};localStorage.setItem('nawa.workspace.v2',JSON.stringify(state));sessionStorage.setItem('nawa-onboarding-role',role);sessionStorage.setItem('nawa-onboarding-name',f.get('name')||u.name);sessionStorage.setItem('nawa-onboarding-email',f.get('email')||'')}catch{}location.href='onboarding.html'});
-const onboarding=$('[data-onboarding]');
-if(onboarding){let role=sessionStorage.getItem('nawa-onboarding-role')||params.get('role')||'manager';if(!roles[role])role='manager';const u=roles[role];$('[data-role-label]').textContent=u.label;const isJoin=role==='engineer'||role==='pm',isClient=role==='client',isManager=role==='manager';document.querySelectorAll('[data-office-field] input,[data-office-field] select').forEach(field=>{field.disabled=!isManager;field.required=isManager&&field.name==='office'});if(isJoin||isClient){$('[data-onboard-title]').textContent=isClient?'الانضمام إلى المشروع':'الانضمام إلى المكتب';$('[data-onboard-desc]').textContent=isClient?'رمز دعوة المشروع أو البريد المرتبط بالدعوة.':'رمز الدعوة المرسل من المكتب الهندسي.';$('[data-step-title]').textContent=isClient?'التحقق من دعوة المشروع':'دعوة المكتب';$('[data-step-desc]').textContent=isClient?'يمنحك رمز الدعوة الوصول إلى بيانات العميل المشتركة فقط.':'يلزم رمز دعوة للوصول إلى مساحة عمل المكتب.';document.querySelectorAll('[data-office-field]').forEach(x=>x.hidden=true);document.querySelectorAll('[data-invite-field]').forEach(x=>x.hidden=isClient);document.querySelectorAll('[data-client-field]').forEach(x=>x.hidden=!isClient);$('[data-step2-title]').textContent='تفضيلات مساحة العمل';$('[data-step2-desc]').textContent='ستظهر لك المشاريع والعناصر التي لديك صلاحية الوصول إليها.';$('[data-ready-title]').textContent='تم تجهيز مسار الانضمام.';$('[data-ready-desc]').textContent='تم ربط الحساب بـ Firebase. تفعيل دعوات المكتب والمشروع سيعتمد على الصلاحيات التي سنثبتها لاحقًا.'}
-let step=1;const show=(next)=>{step=next;document.querySelectorAll('.wizard-panel').forEach(x=>x.classList.toggle('active',Number(x.dataset.step)===step));document.querySelectorAll('.wizard-step').forEach((x,i)=>{x.classList.toggle('current',i+1===step);x.classList.toggle('done',i+1<step)});$('[data-progress]').style.width=step===1?'33%':step===2?'67%':'100%';if(step===3){const name=$('[name="office"]')?.value.trim()||u.office;$('[data-ready-office]').textContent=name;$('[data-ready-role]').textContent=u.label;$('[data-skip]').hidden=true}};
-document.querySelectorAll('[data-next]').forEach(b=>b.addEventListener('click',()=>{if(step===1&&role==='manager'){const name=$('[name="office"]')?.value.trim();if(!name){$('[name="office"]')?.focus();return}}show(Math.min(step+1,3))}));document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>show(Math.max(step-1,1))));$('[data-add-invite]')?.addEventListener('click',()=>{const val=$('[name="teammate"]').value.trim();$('.invite-feedback').textContent=val?`أُضيف ${val} إلى قائمة الدعوات لهذه المعاينة.`:'إضافة بريد الزميل أولًا.'});onboarding.addEventListener('submit',async e=>{
-  e.preventDefault();
-  const submit=e.target.querySelector('[type="submit"]');
-  if(submit){submit.disabled=true;submit.textContent='جارٍ حفظ الإعداد…'}
-  try{
-    const current=auth.currentUser;
-    if(!current)throw new Error('AUTH_REQUIRED');
-    const office=$('[name="office"]')?.value.trim()||'';
-    const officeId=role==='manager'?('office-'+current.uid):null;
-    const payload={
-      onboardingComplete:true,
-      updatedAt:serverTimestamp()
-    };
-    if(role==='manager'){
-      payload.officeId=officeId;
-      payload.officeName=office;
-      payload.company=$('[name="company"]')?.value||'';
-      payload.city=$('[name="city"]')?.value||'';
-      payload.officeEmail=$('[name="officeEmail"]')?.value.trim()||'';
-      payload.permissions={allProjects:true,officeWideAI:true,knowledgeVisibilities:['internal','shared','client'],writeVisibilities:['internal','shared','client']};
-    }
-    await setDoc(doc(db,'users',current.uid),payload,{merge:true});
-    if(role==='manager'){
-      sessionStorage.setItem('nawa-onboarding-office',office);
-      try{
-        const state=JSON.parse(localStorage.getItem('nawa.workspace.v2')||'{}');
-        state.settings={...(state.settings||{}),office};
-        state.user={...(state.user||{}),officeId};
-        localStorage.setItem('nawa.workspace.v2',JSON.stringify(state));
-      }catch{}
-    }
-    goWorkspace(role);
-  }catch(error){
-    console.error(error);
-    $('.invite-feedback').textContent=error?.message==='AUTH_REQUIRED'
-      ?'انتهت جلسة التسجيل. سجّل الدخول ثم أكمل الإعداد.'
-      :'تعذر حفظ إعداد الحساب. حاول مرة أخرى.';
-  }finally{
-    if(submit){submit.disabled=false;submit.textContent='الدخول إلى مساحة العمل'}
-  }
-});$('[data-skip]')?.addEventListener('click',e=>{e.preventDefault();goWorkspace(role)});}
+const roles={
+  manager:{label:'مكتب هندسي',name:'مدير المكتب',office:''},
+  pm:{label:'مدير مشروع',name:'مدير مشروع',office:''},
+  engineer:{label:'مهندس / موظف',name:'مهندس',office:''},
+  client:{label:'عميل',name:'عميل',office:''},
+  consultant:{label:'استشاري',name:'استشاري',office:''}
+};
 
-/* Progressive reveal keeps the landing page calm while making the scroll feel alive. */
+document.querySelector('[data-nav-toggle]')?.addEventListener('click',()=>document.body.classList.toggle('nav-open'));
+document.querySelectorAll('.site-nav a[href^="#"]').forEach(link=>link.addEventListener('click',()=>document.body.classList.remove('nav-open')));
+
+const onboarding=$('[data-onboarding]');
+if(onboarding){
+  let role=sessionStorage.getItem('khaliya-onboarding-role')||params.get('role')||'manager';
+  if(!roles[role])role='manager';
+  const roleInfo=roles[role];
+  const isManager=role==='manager';
+  const isClient=role==='client';
+  $('[data-role-label]').textContent=roleInfo.label;
+  $('[data-onboard-title]').textContent=isManager?'لنجهّز مساحة مكتبك.':isClient?'اربط حسابك بمشروعك.':'اربط حسابك بمكتبك.';
+  $('[data-onboard-desc]').textContent=isManager?'أنشئ مساحة المكتب ثم شارك رمز الدعوة مع أعضاء الفريق.':'أدخل رمز الدعوة الذي أرسله لك المكتب أو مدير المشروع.';
+  document.querySelectorAll('[data-office-field]').forEach(field=>field.hidden=!isManager);
+  document.querySelectorAll('[data-invite-field]').forEach(field=>field.hidden=isManager||isClient);
+  document.querySelectorAll('[data-manager-invite]').forEach(field=>field.hidden=!isManager);
+  document.querySelectorAll('[data-client-field]').forEach(field=>field.hidden=!isClient);
+  $('[data-step-title]').textContent=isManager?'بيانات المكتب':'رمز الدعوة';
+  $('[data-step-desc]').textContent=isManager?'تُحفظ بيانات المكتب في قاعدة البيانات.':'يجب أن يطابق الرمز البريد والدور المسجلين في حسابك.';
+  $('[data-step2-title]').textContent=isManager?'التخصصات والفريق':'معلومات إضافية';
+  $('[data-ready-title]').textContent=isManager?'مساحة مكتبك جاهزة.':'اكتمل ربط الحساب.';
+  $('[data-ready-desc]').textContent='ستظهر هنا المشاريع والبيانات التي لديك صلاحية الوصول إليها.';
+  $('[data-skip]')?.remove();
+  document.querySelector('[data-demo-projects]')?.remove();
+
+  let step=1,officeReady=false;
+  const show=next=>{
+    step=next;
+    document.querySelectorAll('.wizard-panel').forEach(panel=>panel.classList.toggle('active',Number(panel.dataset.step)===step));
+    document.querySelectorAll('.wizard-step').forEach((item,index)=>{item.classList.toggle('current',index+1===step);item.classList.toggle('done',index+1<step)});
+    const progress=$('[data-progress]');
+    if(progress)progress.style.width=step===1?'33%':step===2?'67%':'100%';
+    if(step===3){
+      $('[data-ready-office]').textContent=$('[name="office"]')?.value.trim()||'مكتبك';
+      $('[data-ready-role]').textContent=roleInfo.label;
+    }
+  };
+  document.querySelectorAll('[data-next]').forEach(button=>button.addEventListener('click',()=>{
+    if(step===1){
+      if(isManager&&!$('[name="office"]')?.value.trim()){ $('[name="office"]')?.focus();return; }
+      if(!isManager){
+        const code=String($('[name="invite"]')?.value||$('[name="clientInvite"]')?.value||'').trim();
+        if(!code){ $('[name="invite"]')?.focus();return; }
+      }
+    }
+    show(Math.min(step+1,3));
+  }));
+  document.querySelectorAll('[data-back]').forEach(button=>button.addEventListener('click',()=>show(Math.max(step-1,1))));
+
+  $('[data-add-invite]')?.addEventListener('click',()=>{
+    const email=$('[name="teammate"]')?.value.trim();
+    const feedback=$('.invite-feedback');
+    if(!email){if(feedback)feedback.textContent='أدخل البريد الإلكتروني أولًا.';return;}
+    if(feedback)feedback.textContent='سيُنشأ رمز الدعوة بعد حفظ مساحة المكتب.';
+  });
+
+  onboarding.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const current=auth.currentUser,feedback=$('.invite-feedback'),submit=event.target.querySelector('[type="submit"]');
+    if(officeReady){location.href='home.html';return;}
+    if(!current){if(feedback)feedback.textContent='انتهت جلسة التسجيل. سجّل الدخول ثم أكمل الإعداد.';return;}
+    if(submit){submit.disabled=true;submit.textContent='جارٍ الحفظ…';}
+    try{
+      const userRef=doc(db,'users',current.uid);
+      const userSnap=await getDoc(userRef);
+      if(!userSnap.exists())throw new Error('PROFILE_MISSING');
+      const profile=userSnap.data();
+      if(profile.role!==role)throw new Error('ROLE_MISMATCH');
+      if(isManager){
+        const officeName=$('[name="office"]')?.value.trim();
+        if(!officeName)throw new Error('OFFICE_REQUIRED');
+        const officeId='office-'+current.uid;
+        await setDoc(doc(db,'offices',officeId),{
+          officeId,name:officeName,ownerUid:current.uid,managerUids:[current.uid],
+          memberUids:[current.uid],city:$('[name="city"]')?.value.trim()||'',
+          company:$('[name="company"]')?.value||'',officeEmail:$('[name="officeEmail"]')?.value.trim()||'',
+          createdAt:serverTimestamp(),updatedAt:serverTimestamp()
+        });
+        await updateDoc(userRef,{officeId,officeName,projectIds:[],onboardingComplete:true,updatedAt:serverTimestamp()});
+        await setDoc(doc(db,'offices',officeId,'team',current.uid),{id:current.uid,uid:current.uid,userCode:profile.userCode,name:profile.name,email:profile.email,role:profile.role,specialty:profile.specialty||'',officeId,projectIds:[],visibleTo:[current.uid],createdAt:serverTimestamp()});
+        sessionStorage.setItem('khaliya-onboarding-office',officeName);
+        const inviteEmail=$('[name="teammate"]')?.value.trim().toLowerCase();
+        if(inviteEmail){
+          const inviteRole=$('[name="inviteRole"]')?.value||'engineer';
+          const inviteCode='KHL-'+crypto.randomUUID().replaceAll('-','').slice(0,10).toUpperCase();
+          await setDoc(doc(db,'publicInvites',inviteCode),{
+            officeId,officeName,email:inviteEmail,role:inviteRole,projectIds:[],
+            createdByUid:current.uid,status:'pending',createdAt:serverTimestamp()
+          });
+          officeReady=true;
+          if(feedback)feedback.textContent='تم إنشاء الدعوة. أرسل هذا الرمز للموظف: '+inviteCode+' — اضغط زر الدخول بعد نسخه.';
+          $('[data-ready-desc]').textContent='تم إنشاء مساحة المكتب. انسخ رمز الدعوة من الرسالة وأرسله للموظف.';
+          return;
+        }
+      }else{
+        const inviteCode=String($('[name="invite"]')?.value||$('[name="clientInvite"]')?.value||'').trim();
+        if(!inviteCode)throw new Error('INVITE_REQUIRED');
+        const inviteQuery=await getDoc(doc(db,'publicInvites',inviteCode));
+        if(!inviteQuery.exists())throw new Error('INVITE_NOT_FOUND');
+        const invite=inviteQuery.data(),officeId=invite.officeId;
+        if(invite.email?.toLowerCase()!==current.email?.toLowerCase())throw new Error('INVITE_EMAIL_MISMATCH');
+        if(invite.role!==role||invite.status!=='pending')throw new Error('INVITE_INVALID');
+        await updateDoc(doc(db,'publicInvites',inviteCode),{acceptedBy:current.uid,status:'accepted',acceptedAt:serverTimestamp()});
+        await updateDoc(userRef,{officeId,officeName:invite.officeName||'',projectIds:invite.projectIds||[],onboardingComplete:true,inviteCode,updatedAt:serverTimestamp()});
+        await setDoc(doc(db,'offices',officeId,'team',current.uid),{id:current.uid,uid:current.uid,userCode:profile.userCode,name:profile.name,email:profile.email,role:profile.role,specialty:profile.specialty||'',officeId,projectIds:invite.projectIds||[],visibleTo:[current.uid],createdAt:serverTimestamp()});
+        if(role==='consultant')await setDoc(doc(db,'offices',officeId,'consultants',current.uid),{id:current.uid,uid:current.uid,name:profile.name,specialty:profile.specialty||'',available:true,officeId,visibleTo:[current.uid],createdAt:serverTimestamp()});
+      }
+      location.href=role==='client'?'client.html':role==='consultant'?'consultations.html':'home.html';
+    }catch(error){
+      console.error('KHALIYA onboarding failed',error);
+      const messages={
+        OFFICE_REQUIRED:'اكتب اسم المكتب قبل المتابعة.',
+        INVITE_REQUIRED:'رمز الدعوة مطلوب للانضمام.',
+        INVITE_NOT_FOUND:'رمز الدعوة غير موجود أو انتهت صلاحيته.',
+        INVITE_EMAIL_MISMATCH:'هذا الرمز مرتبط ببريد إلكتروني مختلف.',
+        INVITE_INVALID:'الرمز لا يطابق نوع حسابك أو استُخدم مسبقًا.',
+        ROLE_MISMATCH:'نوع الحساب لا يطابق ملف التسجيل.',
+        PROFILE_MISSING:'لم يُعثر على ملف الحساب في قاعدة البيانات.'
+      };
+      if(feedback)feedback.textContent=messages[error.message]||'تعذر حفظ الإعداد. تحقق من قواعد Firestore وحاول مجددًا.';
+    }finally{
+      if(submit){submit.disabled=false;submit.textContent=officeReady?'المتابعة إلى مساحة العمل':'الدخول إلى مساحة العمل';}
+    }
+  });
+}
+
 if(document.body.classList.contains('public-page')){
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const revealTargets=[
-    ...document.querySelectorAll('.hero-copy,.hero-visual,.trust-inner,.section-heading,.feature-card,.workflow-layout>*,.workflow-list li,.role-grid article,.security-inner>*,.closing-cta>*')
-  ];
-  if(!reduced&&'IntersectionObserver' in window){
+  const targets=[...document.querySelectorAll('.hero-copy,.hero-visual,.trust-inner,.section-heading,.feature-card,.workflow-layout>*,.workflow-list li,.role-grid article,.security-inner>*,.closing-cta>*')];
+  if(!reduced&&'IntersectionObserver'in window){
     document.body.classList.add('motion-ready');
-    revealTargets.forEach((el,index)=>{el.dataset.reveal='pending';el.style.setProperty('--reveal-delay',`${(index%4)*55}ms`)});
-    const revealObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{
-      if(entry.isIntersecting){entry.target.dataset.reveal='visible';revealObserver.unobserve(entry.target)}
-    }),{threshold:.12,rootMargin:'0px 0px -5% 0px'});
-    revealTargets.forEach(el=>revealObserver.observe(el));
+    targets.forEach((element,index)=>{element.dataset.reveal='pending';element.style.setProperty('--reveal-delay',(index%4)*55+'ms')});
+    const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.dataset.reveal='visible';observer.unobserve(entry.target)}}),{threshold:.12,rootMargin:'0px 0px -5% 0px'});
+    targets.forEach(element=>observer.observe(element));
   }
-  const heroVisual=document.querySelector('.hero-visual');
-  if(heroVisual&&!reduced&&window.matchMedia('(pointer:fine)').matches){
-    heroVisual.addEventListener('pointermove',event=>{
-      const rect=heroVisual.getBoundingClientRect();
-      const x=((event.clientX-rect.left)/rect.width-.5)*5;
-      const y=((event.clientY-rect.top)/rect.height-.5)*5;
-      heroVisual.style.setProperty('--hero-shift-x',`${x.toFixed(1)}px`);
-      heroVisual.style.setProperty('--hero-shift-y',`${y.toFixed(1)}px`);
+  const visual=$('.hero-visual');
+  if(visual&&!reduced&&window.matchMedia('(pointer:fine)').matches){
+    visual.addEventListener('pointermove',event=>{
+      const rect=visual.getBoundingClientRect();
+      visual.style.setProperty('--hero-shift-x',(((event.clientX-rect.left)/rect.width-.5)*5).toFixed(1)+'px');
+      visual.style.setProperty('--hero-shift-y',(((event.clientY-rect.top)/rect.height-.5)*5).toFixed(1)+'px');
     });
-    heroVisual.addEventListener('pointerleave',()=>{
-      heroVisual.style.setProperty('--hero-shift-x','0px');
-      heroVisual.style.setProperty('--hero-shift-y','0px');
-    });
+    visual.addEventListener('pointerleave',()=>{visual.style.setProperty('--hero-shift-x','0px');visual.style.setProperty('--hero-shift-y','0px')});
   }
 }

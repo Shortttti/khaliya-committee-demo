@@ -1,6 +1,7 @@
 import { auth, db } from './firebase.js';
+import { bindCloudStore, getState, updateState, makeId } from './store.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const API_BASE='https://khaliyah-engineering-office.short-story-im.workers.dev';
 const MODULES=new Set([
@@ -15,12 +16,7 @@ const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[ch]));
 
-function readWorkspace(){
-  try{return JSON.parse(localStorage.getItem('nawa.workspace.v2')||'{}')}catch{return {}}
-}
-function writeWorkspace(state){
-  localStorage.setItem('nawa.workspace.v2',JSON.stringify(state));
-}
+function readWorkspace(){ return getState(); }
 function toast(message){
   let region=document.querySelector('.toast-region');
   if(!region){
@@ -48,36 +44,17 @@ if(!user){
   await new Promise(()=>{});
 }
 
-let profile={
-  uid:user.uid,
-  email:user.email||'',
-  role:'engineer',
-  officeId:null,
-  projectIds:[]
-};
-
+let profile={uid:user.uid,email:user.email||'',role:'',officeId:null,projectIds:[]};
 try{
   const snap=await getDoc(doc(db,'users',user.uid));
-  if(snap.exists())profile={...profile,...snap.data()};
+  if(!snap.exists())throw new Error('PROFILE_NOT_FOUND');
+  profile={...profile,...snap.data()};
+  if(!['manager','pm','engineer','client','consultant'].includes(profile.role))throw new Error('INVALID_PROFILE_ROLE');
+  bindCloudStore(profile);
 }catch(error){
-  console.warn('KHALIYA profile sync failed',error);
-}
-
-{
-  const state=readWorkspace();
-  const name=String(profile.name||user.displayName||user.email||'مستخدم').trim();
-  state.user={
-    ...(state.user||{}),
-    uid:user.uid,
-    name,
-    email:user.email||profile.email||'',
-    phone:profile.phone||'',
-    role:profile.role||state.user?.role||'engineer',
-    initial:name.slice(0,1)||'م'
-  };
-  if(profile.officeName)state.settings={...(state.settings||{}),office:profile.officeName};
-  writeWorkspace(state);
-  sessionStorage.setItem('nawa-demo-session','1');
+  console.error('KHALIYA profile unavailable',error);
+  location.replace('login.html?error=profile');
+  await new Promise(()=>{});
 }
 
 async function token(){
@@ -115,6 +92,8 @@ async function ai(module,payload={}){
 
 async function uploadFile(file,options={}){
   if(!(file instanceof File))throw new Error('File is required');
+  const workspace=getState(),project=workspace.projects.find(item=>item.id===options.projectId);
+  const visibleTo=[...new Set([user.uid,...(project?.visibleTo||[]),...(project?.managerUids||[]),...(project?.officeManagerUids||[]),project?.clientUid].filter(Boolean))];
   const headers={
     'Content-Type':file.type||'application/octet-stream',
     'X-File-Name':encodeURIComponent(file.name),
@@ -123,9 +102,29 @@ async function uploadFile(file,options={}){
     'X-Source-Type':options.sourceType||'project-file'
   };
   if(options.officeId)headers['X-Office-Id']=options.officeId;
-  return api('/api/files/upload',{body:file,headers});
+  const result=await api('/api/files/upload',{body:file,headers});
+  return {...result,storageKey:result.storageKey||result.key||'',fileId:result.fileId||'',visibleTo,ownerUid:user.uid,project};
 }
 
+async function conceptImage(payload){
+  return api('/api/ai/concept-image',{
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+}
+async function fileStatus(storageKey){
+  if(!storageKey)throw new Error('FILE_KEY_REQUIRED');
+  return api('/api/files/status?key='+encodeURIComponent(storageKey),{method:'GET'});
+}
+async function downloadFile(file){
+  const key=String(file?.storageKey||'');
+  if(!key)throw new Error('FILE_KEY_REQUIRED');
+  const idToken=await token();
+  const response=await fetch(API_BASE+'/api/files/download?key='+encodeURIComponent(key),{headers:{Authorization:'Bearer '+idToken}});
+  if(!response.ok){let message='تعذر تنزيل الملف.';try{const data=await response.json();message=data.error||message}catch{}throw new Error(message)}
+  const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download=String(file.name||'project-file');document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
 async function indexText(payload){
   return api('/api/knowledge/index-text',{
     headers:{'Content-Type':'application/json'},
@@ -157,7 +156,7 @@ function currentContext(){
 function authorizedProjectId(candidate){
   const id=String(candidate||'').trim();
   if(!id)return '';
-  if(profile?.permissions?.allProjects===true)return id;
+  if(profile?.role==='manager'&&profile?.officeId)return id;
   if(Array.isArray(profile?.projectIds)&&profile.projectIds.includes(id))return id;
   return '';
 }
@@ -266,6 +265,10 @@ document.addEventListener('submit',async event=>{
       });
       document.querySelector('#modalBackdrop')?.classList.remove('open');
       toast('تم رفع الملف وإرساله للتحليل والفهرسة');
+      const projectId=authorizedProjectId(selected);
+      if(projectId){
+        updateState(state=>state.files.unshift({id:result.fileId||makeId('FILE'),project:projectId,projectId,ownerUid:user.uid,visibleTo:result.visibleTo||[user.uid],name:file.name,code:result.code||makeId('DOC'),discipline:String(data.get('discipline')||''),type:file.name.split('.').pop()?.toUpperCase()||file.type,version:1,updated:new Date().toISOString().slice(0,10),owner:profile.name||user.email,state:result.analysis?'تم التحليل':'جارٍ التحليل',storageKey:result.storageKey||'',downloadUrl:result.downloadUrl||'',analysis:result.analysis||null,visibleTo:result.visibleTo||[user.uid]}));
+      }
       console.info('KHALIYA upload queued',result);
     }catch(error){
       toast('تعذر رفع الملف: '+(error.message||'خطأ'));
@@ -296,10 +299,7 @@ document.addEventListener('click',async event=>{
     event.preventDefault();
     event.stopImmediatePropagation();
     try{await signOut(auth)}finally{
-      const state=readWorkspace();
-      delete state.user;
-      writeWorkspace(state);
-      ['nawa-demo-session','nawa-onboarding-role','nawa-onboarding-name','nawa-onboarding-email','nawa-onboarding-office'].forEach(k=>sessionStorage.removeItem(k));
+      ['khaliya-demo-session','khaliya-onboarding-role','khaliya-onboarding-name','khaliya-onboarding-email','khaliya-onboarding-office','nawa-demo-session','nawa-onboarding-role','nawa-onboarding-name','nawa-onboarding-email','nawa-onboarding-office'].forEach(k=>sessionStorage.removeItem(k));
       location.replace('login.html');
     }
     return;
@@ -327,14 +327,68 @@ document.addEventListener('click',async event=>{
   }
 },true);
 
+async function lookupUserByCode(code,expectedRole){
+  if(profile.role!=='manager')throw new Error('FORBIDDEN');
+  const value=String(code||'').trim();
+  if(!value.startsWith('KHL-'))throw new Error('INVALID_USER_ID');
+  const uid=value.slice(4);
+  const snap=await getDoc(doc(db,'users',uid));
+  if(!snap.exists())throw new Error('USER_NOT_FOUND');
+  const found=snap.data();
+  if(found.userCode!==value||found.officeId!==profile.officeId)throw new Error('USER_NOT_IN_OFFICE');
+  if(expectedRole&&found.role!==expectedRole)throw new Error('ROLE_MISMATCH');
+  return found;
+}
+async function reserveConsultantSlot({consultantUid,projectId,date,time,consultationId}){
+  if(!profile.officeId||!['client','engineer','pm'].includes(profile.role))throw new Error('FORBIDDEN');
+  if(!date||!time||!consultantUid)throw new Error('MISSING_APPOINTMENT');
+  const slotId=String(consultantUid+'_'+date+'_'+time).replace(/[^a-zA-Z0-9_-]/g,'-');
+  const slotRef=doc(db,'offices',profile.officeId,'consultantSlots',slotId);
+  await runTransaction(db,async transaction=>{
+    const current=await transaction.get(slotRef);
+    if(current.exists())throw new Error('CONSULTANT_SLOT_TAKEN');
+    transaction.set(slotRef,{
+      id:slotId,officeId:profile.officeId,projectId,consultantUid,
+      requestedByUid:user.uid,consultationId,date,time,
+      visibleTo:[user.uid,consultantUid],createdAt:new Date().toISOString()
+    });
+  });
+  return slotId;
+}
+async function createInvite(email,role,projectIds=[]){
+  if(profile.role!=='manager')throw new Error('FORBIDDEN');
+  const normalized=String(email||'').trim().toLowerCase();
+  if(!normalized||!['pm','engineer','client','consultant'].includes(role))throw new Error('INVALID_INVITE');
+  const code='KHL-'+crypto.randomUUID().replaceAll('-','').slice(0,10).toUpperCase();
+  await setDoc(doc(db,'publicInvites',code),{
+    officeId:profile.officeId,officeName:profile.officeName||'',
+    email:normalized,role,projectIds,createdByUid:user.uid,
+    status:'pending',createdAt:serverTimestamp()
+  });
+  return code;
+}
+async function addProjectMembership(uid,projectId){
+  if(profile.role!=='manager')throw new Error('FORBIDDEN');
+  const snap=await getDoc(doc(db,'users',uid));
+  if(!snap.exists()||snap.data().officeId!==profile.officeId)throw new Error('USER_NOT_IN_OFFICE');
+  await updateDoc(doc(db,'users',uid),{projectIds:arrayUnion(projectId)});
+}
+
 window.KHALIYA_PLATFORM=Object.freeze({
   apiBase:API_BASE,
   user,
   profile,
   health,
   ai,
+  conceptImage,
+  fileStatus,
+  downloadFile,
   uploadFile,
   indexText,
+  lookupUserByCode,
+  addProjectMembership,
+  createInvite,
+  reserveConsultantSlot,
   currentContext,
   refreshToken:()=>auth.currentUser?.getIdToken(true),
   signOut:()=>signOut(auth)

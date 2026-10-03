@@ -1,4 +1,4 @@
-name: Deploy static NAWA site
+name: Deploy static KHALIYA site
 on:
   push:
     branches: [main]

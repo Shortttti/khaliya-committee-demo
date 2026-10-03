@@ -15,7 +15,8 @@ const roles={
   manager:{name:'مدير المكتب',initial:'م'},
   pm:{name:'مدير مشروع',initial:'م'},
   engineer:{name:'مهندس',initial:'هـ'},
-  client:{name:'عميل',initial:'ع'}
+  client:{name:'عميل',initial:'ع'},
+  consultant:{name:'استشاري',initial:'س'}
 };
 
 if(document.querySelector('[data-auth="signup"]')&&params.get('role')){
@@ -24,21 +25,7 @@ if(document.querySelector('[data-auth="signup"]')&&params.get('role')){
 }
 
 function saveLocalUser(profile,user){
-  const role=profile.role||'engineer';
-  const fallback=roles[role]||roles.engineer;
-  const state=JSON.parse(localStorage.getItem('nawa.workspace.v2')||'{}');
-  const name=(profile.name||user.displayName||user.email||fallback.name).trim();
-  state.user={
-    uid:user.uid,
-    name,
-    email:user.email||profile.email||'',
-    phone:profile.phone||'',
-    initial:name.slice(0,1)||fallback.initial,
-    role
-  };
-  if(profile.officeName)state.settings={...(state.settings||{}),office:profile.officeName};
-  localStorage.setItem('nawa.workspace.v2',JSON.stringify(state));
-  return role;
+  return profile.role||'engineer';
 }
 
 document.querySelector('[data-forgot]')?.addEventListener('click',async e=>{
@@ -96,7 +83,15 @@ document.querySelector('[data-auth="signup"]')?.addEventListener('submit',async 
   const phone=String(data.get('phone')||'').trim();
   const password=String(data.get('password')||'');
   const confirmPassword=String(data.get('confirmPassword')||'');
+  const specialty=String(data.get('specialty')||'').trim();
+  const otherSpecialty=String(data.get('otherSpecialty')||'').trim();
+  const selectedSpecialty=specialty==='other'?otherSpecialty:specialty;
   const submit=form.querySelector('[type="submit"]');
+
+  if(['pm','engineer','consultant'].includes(role)&&!selectedSpecialty){
+    feedback.textContent='اختر التخصص أو اكتب تخصصك في خانة أخرى.';
+    return;
+  }
 
   if(password!==confirmPassword){
     feedback.textContent='كلمتا المرور غير متطابقتين.';
@@ -111,7 +106,9 @@ document.querySelector('[data-auth="signup"]')?.addEventListener('submit',async 
     const credential=await createUserWithEmailAndPassword(auth,email,password);
     const profile={
       uid:credential.user.uid,
+      userCode:'KHL-'+credential.user.uid,
       name,
+      specialty:selectedSpecialty,
       email:credential.user.email||email,
       phone,
       role,
@@ -123,9 +120,9 @@ document.querySelector('[data-auth="signup"]')?.addEventListener('submit',async 
     };
     await setDoc(doc(db,'users',credential.user.uid),profile);
     saveLocalUser(profile,credential.user);
-    sessionStorage.setItem('nawa-onboarding-role',role);
-    sessionStorage.setItem('nawa-onboarding-name',name);
-    sessionStorage.setItem('nawa-onboarding-email',email);
+    sessionStorage.setItem('khaliya-onboarding-role',role);
+    sessionStorage.setItem('khaliya-onboarding-name',name);
+    sessionStorage.setItem('khaliya-onboarding-email',email);
     location.href='onboarding.html';
   }catch(error){
     console.error(error);
@@ -144,3 +141,23 @@ document.querySelector('[data-auth="signup"]')?.addEventListener('submit',async 
     if(submit)submit.disabled=false;
   }
 });
+
+const signupForm=document.querySelector('[data-auth="signup"]');
+if(signupForm){
+  const updateSpecialty=()=>{
+    const role=signupForm.querySelector('[name="role"]:checked')?.value||'manager';
+    const field=signupForm.querySelector('[data-specialty-field]');
+    const other=signupForm.querySelector('[data-other-specialty]');
+    const input=other?.querySelector('input');
+    const specialtyVisible=['pm','engineer','consultant'].includes(role);
+    if(field)field.hidden=!specialtyVisible;
+    if(other)other.hidden=!specialtyVisible||signupForm.querySelector('[name="specialty"]')?.value!=='other';
+    if(input){input.required=!!specialtyVisible&&signupForm.querySelector('[name="specialty"]')?.value==='other';input.disabled=!specialtyVisible||signupForm.querySelector('[name="specialty"]')?.value!=='other'}
+  };
+  signupForm.querySelectorAll('[name="role"]').forEach(input=>input.addEventListener('change',updateSpecialty));
+  signupForm.querySelector('[name="specialty"]')?.addEventListener('change',()=>{
+    const other=signupForm.querySelector('[data-other-specialty]');
+    if(other){other.hidden=signupForm.querySelector('[name="specialty"]')?.value!=='other';updateSpecialty()}
+  });
+  updateSpecialty();
+}
