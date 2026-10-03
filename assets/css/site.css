@@ -194,3 +194,33 @@ body.page-leaving{opacity:.4;filter:blur(2px)}
 .button,.nav-toggle{translate:var(--mag-x,0px) var(--mag-y,0px);transition:translate .16s ease,transform .28s ease,box-shadow .28s ease,background .28s ease}
 .site-nav>a:not(.button){position:relative}.site-nav>a:not(.button):after{content:"";position:absolute;right:0;left:100%;bottom:-7px;height:1px;background:linear-gradient(90deg,#2a7852,#c0a457);transition:left .28s ease}.site-nav>a:not(.button):hover:after{left:0}
 @media (prefers-reduced-motion:reduce){.site-header .public-brand-logo,.hero-visual,.hero-copy .eyebrow i,.hero-visual .thread-card,.feature-card:before,.role-grid article:before,.feature-index,.workflow-section:before,.security-band,.security-band:after,.closing-brand-mark{animation:none!important}.hero-copy,.hero-visual{translate:0 0!important}.motion-progress,.khaliya-cursor-aura{display:none!important}body.page-leaving{opacity:1;filter:none}}
+
+
+/* KHALIYA motion v3 — cinematic section choreography */
+.khaliya-ambient{position:fixed;z-index:-2;inset:0;overflow:hidden;pointer-events:none}
+.khaliya-ambient i{position:absolute;border-radius:50%;filter:blur(1px);opacity:.45;mix-blend-mode:multiply}
+.khaliya-ambient i:nth-child(1){width:34vw;height:34vw;right:-10vw;top:10vh;background:radial-gradient(circle,rgba(56,142,96,.14),rgba(56,142,96,0) 68%);animation:khaliyaOrbA 16s ease-in-out infinite alternate}
+.khaliya-ambient i:nth-child(2){width:28vw;height:28vw;left:-8vw;top:48vh;background:radial-gradient(circle,rgba(195,163,82,.12),rgba(195,163,82,0) 70%);animation:khaliyaOrbB 19s ease-in-out infinite alternate}
+.khaliya-ambient i:nth-child(3){width:22vw;height:22vw;left:34vw;bottom:-9vw;background:radial-gradient(circle,rgba(42,116,80,.09),rgba(42,116,80,0) 70%);animation:khaliyaOrbC 14s ease-in-out infinite alternate}
+@keyframes khaliyaOrbA{to{transform:translate(-8vw,8vh) scale(1.16)}}
+@keyframes khaliyaOrbB{to{transform:translate(10vw,-7vh) scale(.88)}}
+@keyframes khaliyaOrbC{to{transform:translate(-5vw,-5vh) scale(1.08)}}
+
+.cinematic-section{--section-focus:0;position:relative;transition:filter .5s ease,opacity .5s ease,transform .5s ease}
+.cinematic-section:not(.cinematic-focus){filter:saturate(calc(.94 + var(--section-focus)*.06)) brightness(calc(.985 + var(--section-focus)*.015))}
+.cinematic-section:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:calc(var(--section-focus)*.12);background:linear-gradient(120deg,transparent 0 35%,rgba(255,255,255,.35) 49%,transparent 64%);transform:translateX(calc((1 - var(--section-focus))*28%));transition:opacity .35s ease,transform .45s ease}
+.hero.cinematic-section:before,.security-band.cinematic-section:before{mix-blend-mode:overlay}
+.motion-v3-ready .feature-grid .feature-card,.motion-v3-ready .role-grid article{will-change:transform}
+.motion-v3-ready .feature-grid .feature-card:nth-child(odd),.motion-v3-ready .role-grid article:nth-child(odd){animation:khaliyaCardBreathe 6.8s ease-in-out infinite}
+.motion-v3-ready .feature-grid .feature-card:nth-child(even),.motion-v3-ready .role-grid article:nth-child(even){animation:khaliyaCardBreatheAlt 7.6s ease-in-out infinite}
+@keyframes khaliyaCardBreathe{50%{translate:0 -3px}}
+@keyframes khaliyaCardBreatheAlt{50%{translate:0 3px}}
+.khaliya-cursor-trail{position:fixed;z-index:118;width:7px;height:7px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,#82c79d 0 24%,rgba(80,161,112,.36) 45%,transparent 75%);transform:translate(-50%,-50%);animation:khaliyaTrail .62s ease-out forwards}
+@keyframes khaliyaTrail{to{opacity:0;transform:translate(-50%,-50%) scale(3.8)}}
+.khaliya-cursor-aura.is-interactive{width:52px;height:52px;border-color:rgba(44,130,88,.35);background:radial-gradient(circle,rgba(65,165,107,.16),transparent 64%);box-shadow:0 0 48px rgba(55,145,97,.18)}
+body.page-entering main,body.page-entering .site-header,body.page-entering .auth-header{animation:khaliyaPageEnter .78s cubic-bezier(.16,.84,.24,1) both}
+@keyframes khaliyaPageEnter{from{opacity:0;filter:blur(7px);transform:translateY(10px) scale(.995)}to{opacity:1;filter:none;transform:none}}
+.hero-copy .button,.closing-cta .button{animation:khaliyaCtaPulse 5.5s ease-in-out infinite}
+@keyframes khaliyaCtaPulse{50%{box-shadow:0 12px 30px rgba(38,112,76,.18),0 0 0 5px rgba(51,131,90,.035)}}
+.site-footer .public-brand-logo{transition:transform .3s ease}.site-footer .public-brand:hover .public-brand-logo{transform:rotate(-2deg) scale(1.025)}
+@media(prefers-reduced-motion:reduce){.khaliya-ambient,.khaliya-cursor-trail{display:none!important}.cinematic-section:before{display:none}.motion-v3-ready .feature-grid .feature-card,.motion-v3-ready .role-grid article,.hero-copy .button,.closing-cta .button{animation:none!important}body.page-entering main,body.page-entering .site-header,body.page-entering .auth-header{animation:none!important}}
