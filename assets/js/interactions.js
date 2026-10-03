@@ -174,3 +174,94 @@ window.addEventListener('resize',requestScrollSync,{passive:true});
 window.addEventListener('pageshow',()=>document.body.classList.remove('page-leaving'));
 ensureMotionUi();syncScrollState();enablePageTransitions();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initReveal,{once:true});else initReveal();
+
+/* KHALIYA motion v3 */
+let lastTrailAt=0;
+let cinematicRaf=0;
+
+function ensureCinematicLayers(){
+  if(reducedMotion.matches)return;
+  if(!document.querySelector('.khaliya-ambient')){
+    const ambient=document.createElement('div');
+    ambient.className='khaliya-ambient';
+    ambient.setAttribute('aria-hidden','true');
+    ambient.innerHTML='<i></i><i></i><i></i>';
+    document.body.prepend(ambient);
+  }
+  document.body.classList.add('motion-v3-ready');
+}
+
+function prepareCinematicSections(){
+  if(reducedMotion.matches)return;
+  const selector='.hero,.workflow-section,.security-band,.closing-cta,main>section,.content>section,.page.active>section,.page>.panel,.page>.grid';
+  document.querySelectorAll(selector).forEach((section,index)=>{
+    if(section.dataset.cinematicReady)return;
+    section.dataset.cinematicReady='true';
+    section.classList.add('cinematic-section');
+    section.style.setProperty('--cinematic-index',index%8);
+  });
+}
+
+function syncCinematicSections(){
+  if(reducedMotion.matches)return;
+  const center=innerHeight*.52;
+  document.querySelectorAll('.cinematic-section').forEach(section=>{
+    const rect=section.getBoundingClientRect();
+    const sectionCenter=rect.top+rect.height/2;
+    const distance=Math.abs(sectionCenter-center);
+    const range=Math.max(innerHeight*.82,rect.height*.72);
+    const focus=Math.max(0,Math.min(1,1-distance/range));
+    section.style.setProperty('--section-focus',focus.toFixed(3));
+    section.classList.toggle('cinematic-focus',focus>.48);
+  });
+}
+
+function requestCinematicSync(){
+  if(cinematicRaf)return;
+  cinematicRaf=requestAnimationFrame(()=>{
+    cinematicRaf=0;
+    prepareCinematicSections();
+    syncCinematicSections();
+  });
+}
+
+function spawnCursorTrail(event){
+  if(!finePointer.matches||reducedMotion.matches)return;
+  const now=performance.now();
+  if(now-lastTrailAt<42)return;
+  lastTrailAt=now;
+  const dot=document.createElement('i');
+  dot.className='khaliya-cursor-trail';
+  dot.style.left=event.clientX+'px';
+  dot.style.top=event.clientY+'px';
+  document.body.append(dot);
+  setTimeout(()=>dot.remove(),620);
+}
+
+function interactiveCursorState(event){
+  if(!finePointer.matches||reducedMotion.matches)return;
+  const aura=document.querySelector('.khaliya-cursor-aura');
+  if(!aura)return;
+  const interactive=event.target.closest('a,button,input,select,textarea,.panel,.feature-card,.role-grid article,.today-project');
+  aura.classList.toggle('is-interactive',!!interactive);
+}
+
+function pageEnter(){
+  if(reducedMotion.matches)return;
+  document.body.classList.remove('page-entering');
+  void document.body.offsetWidth;
+  document.body.classList.add('page-entering');
+  setTimeout(()=>document.body.classList.remove('page-entering'),850);
+}
+
+document.addEventListener('pointermove',spawnCursorTrail,{passive:true});
+document.addEventListener('pointerover',interactiveCursorState,{passive:true});
+document.addEventListener('pointerout',interactiveCursorState,{passive:true});
+window.addEventListener('scroll',requestCinematicSync,{passive:true});
+window.addEventListener('resize',requestCinematicSync,{passive:true});
+window.addEventListener('pageshow',()=>{pageEnter();requestCinematicSync()});
+new MutationObserver(requestCinematicSync).observe(document.body,{childList:true,subtree:true});
+ensureCinematicLayers();
+prepareCinematicSections();
+syncCinematicSections();
+pageEnter();
