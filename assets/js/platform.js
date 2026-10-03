@@ -55,6 +55,7 @@ try{
     await new Promise(()=>{});
   }
   bindCloudStore(profile);
+  window.dispatchEvent(new Event('khaliya:platform-ready'));
 }catch(error){
   console.error('KHALIYA profile unavailable',error);
   location.replace('login.html?error=profile');
