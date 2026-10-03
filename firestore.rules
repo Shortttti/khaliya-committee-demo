@@ -48,6 +48,10 @@ service cloud.firestore {
         || (inOffice(officeId) && hasRole('pm') && projectMember(projectId));
     }
 
+    function validInviteCode(inviteCode) {
+      return inviteCode.matches('^KHALIYA-INV-[A-F0-9]{8}$');
+    }
+
     match /users/{uid} {
       allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.uid == uid
@@ -218,9 +222,15 @@ service cloud.firestore {
 
     match /publicInvites/{inviteCode} {
       allow create: if signedIn()
+        && validInviteCode(inviteCode)
         && officeManager(request.resource.data.officeId)
-        && request.resource.data.status == 'pending'
-        && request.resource.data.createdByUid == request.auth.uid;
+        && request.resource.data.keys().hasAll(['officeId', 'officeName', 'email', 'role', 'projectIds', 'createdByUid', 'status', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['officeId', 'officeName', 'email', 'role', 'projectIds', 'createdByUid', 'status', 'createdAt'])
+        && request.resource.data.role in ['pm', 'engineer', 'client', 'consultant']
+        && request.resource.data.email is string
+        && request.resource.data.projectIds is list
+        && request.resource.data.createdByUid == request.auth.uid
+        && request.resource.data.status == 'pending';
       allow read: if signedIn()
         && (officeManager(resource.data.officeId)
           || resource.data.email == request.auth.token.email);
