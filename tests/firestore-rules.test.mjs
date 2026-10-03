@@ -73,23 +73,25 @@ async function submitRequest({ uid, email, role = 'engineer', officeId, code }) 
 }
 async function approveRequest({ uid, email, role = 'engineer', officeId, code }) {
   const managerDb = testEnv.authenticatedContext('office-manager', { email: 'manager@example.com' }).firestore();
-  await assertSucceeds(updateDoc(doc(managerDb, 'offices', officeId, 'joinRequests', uid), {
+  const batch = writeBatch(managerDb);
+  batch.update(doc(managerDb, 'offices', officeId, 'joinRequests', uid), {
     status: 'accepted', reviewedByUid: 'office-manager', reviewedAt: serverTimestamp()
-  }));
-  await assertSucceeds(updateDoc(doc(managerDb, 'users', uid), {
+  });
+  batch.update(doc(managerDb, 'users', uid), {
     officeId, officeName: 'مكتب خلية التجريبي', projectIds: [], onboardingComplete: true,
     inviteCode: code, joinRequestStatus: 'accepted', updatedAt: serverTimestamp()
-  }));
-  await assertSucceeds(setDoc(doc(managerDb, 'offices', officeId, 'team', uid), {
+  });
+  batch.set(doc(managerDb, 'offices', officeId, 'team', uid), {
     id: uid, uid, userCode: 'KHL-' + uid, name: 'عضو ' + uid, email, role,
     specialty: '', officeId, projectIds: [], visibleTo: [uid, 'office-manager'],
     createdAt: serverTimestamp(), updatedAt: serverTimestamp()
-  }));
-  await assertSucceeds(setDoc(doc(managerDb, 'offices', officeId, 'notifications', 'accepted-' + uid), {
+  });
+  batch.set(doc(managerDb, 'offices', officeId, 'notifications', 'accepted-' + uid), {
     id: 'accepted-' + uid, officeId, type: 'join-request-approved', text: 'تم قبول طلب الانضمام',
     recipientUid: uid, visibleTo: [uid], createdByUid: 'office-manager',
     createdAt: serverTimestamp(), readBy: []
-  }));
+  });
+  await assertSucceeds(batch.commit());
 }
 async function updateProfileMembership(db, uid, officeId) {
   const batch = writeBatch(db);
@@ -116,7 +118,8 @@ test('one office invite accepts multiple join requests while membership waits fo
   await assertFails(updateProfileMembership(memberDb, 'engineer-one', officeId));
   await approveRequest({ uid: 'engineer-one', email: 'one@example.com', officeId, code });
   assert.equal((await assertSucceeds(getDoc(doc(memberDb, 'users', 'engineer-one')))).data().officeId, officeId);
-  assert.equal((await assertSucceeds(getDoc(doc(memberDb, 'offices', officeId, 'joinRequests', 'engineer-two')))).data().status, 'pending');
+  assert.equal((await assertSucceeds(getDoc(doc(managerDb, 'offices', officeId, 'joinRequests', 'engineer-two')))).data().status, 'pending');
+  assert.equal((await assertSucceeds(getDoc(doc(managerDb, 'offices', officeId, 'notifications', 'NTF-engineer-one')))).data().type, 'join-request');
   assert.equal((await assertSucceeds(getDoc(doc(memberDb, 'publicInvites', code)))).data().status, 'active');
   const memberNote = await assertSucceeds(getDoc(doc(memberDb, 'offices', officeId, 'notifications', 'accepted-engineer-one')));
   assert.equal(memberNote.data().recipientUid, 'engineer-one');
