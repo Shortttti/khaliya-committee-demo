@@ -39,6 +39,12 @@ async function seedOffice({ officeId = 'office-test', code = 'KHALIYA-INV-000000
         name: member.name, email: member.email, role: member.role || 'engineer',
         officeId, projectIds: ['project-1'], visibleTo: ['office-manager', member.uid]
       });
+      await setDoc(doc(db, 'offices', officeId, 'joinRequests', member.uid), {
+        id: member.uid, uid: member.uid, userCode: member.userCode || 'KHL-' + member.uid,
+        name: member.name, email: member.email, role: member.role || 'engineer',
+        specialty: '', officeId, officeName: 'مكتب خلية التجريبي', inviteCode: code,
+        managerUids: ['office-manager'], status: 'accepted', createdAt: new Date()
+      });
     }
   });
   return { officeId, code };
@@ -166,10 +172,13 @@ test('rotating the office invite revokes the old code for new requests', async (
 });
 
 test('office manager can remove an employee and the former member loses workspace access', async () => {
-  const { officeId } = await seedOffice({ members: [{ uid: 'employee', email: 'employee@example.com', name: 'موظف' }] });
+  const { officeId, code } = await seedOffice({ members: [{ uid: 'employee', email: 'employee@example.com', name: 'موظف' }] });
   const managerDb = testEnv.authenticatedContext('office-manager', { email: 'manager@example.com' }).firestore();
   const batch = writeBatch(managerDb);
   batch.delete(doc(managerDb, 'offices', officeId, 'team', 'employee'));
+  batch.update(doc(managerDb, 'offices', officeId, 'joinRequests', 'employee'), {
+    status: 'removed', reviewedByUid: 'office-manager', reviewedAt: serverTimestamp()
+  });
   batch.update(doc(managerDb, 'users', 'employee'), {
     officeId: '', officeName: '', projectIds: [], onboardingComplete: false,
     joinRequestStatus: 'removed', updatedAt: serverTimestamp()
@@ -178,6 +187,8 @@ test('office manager can remove an employee and the former member loses workspac
   const formerMember = testEnv.authenticatedContext('employee', { email: 'employee@example.com' }).firestore();
   await assertFails(getDoc(doc(formerMember, 'offices', officeId)));
   assert.equal((await assertSucceeds(getDoc(doc(formerMember, 'users', 'employee')))).data().officeId, '');
+  await assertSucceeds(submitRequest({ uid: 'employee', email: 'employee@example.com', officeId, code }));
+  assert.equal((await assertSucceeds(getDoc(doc(formerMember, 'offices', officeId, 'joinRequests', 'employee')))).data().status, 'pending');
 });
 
 test('an invitation role must match the registered account role', async () => {
