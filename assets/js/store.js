@@ -29,9 +29,10 @@ function normalize(row,id){
 }
 function canSync(){return !!(profile?.uid&&profile?.officeId)}
 function collectionPath(name){return collection(db,'offices',profile.officeId,name)}
-function wire(row,id){
+function wire(row,id,name){
   const value={...row,id,officeId:profile.officeId,updatedAt:serverTimestamp()};
   if(value.project&&!value.projectId)value.projectId=value.project;
+  if(name==='projects')value.projectId=id;
   delete value.project;
   value.visibleTo=Array.isArray(value.visibleTo)&&value.visibleTo.length?Array.from(new Set(value.visibleTo.map(String))):[profile.uid];
   return value;
@@ -51,7 +52,7 @@ async function syncChanges(before,after){
     const nextMap=new Map(next.map((row,index)=>[idOf(row,index),row]));
     for(const [id,row] of nextMap){
       if(JSON.stringify(oldMap.get(id))===JSON.stringify(row))continue;
-      writes.push(setDoc(doc(collectionPath(name),id),wire(row,id)));
+      writes.push(setDoc(doc(collectionPath(name),id),wire(row,id,name)));
     }
     for(const id of oldMap.keys())if(!nextMap.has(id))writes.push(deleteDoc(doc(collectionPath(name),id)));
   }
