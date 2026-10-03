@@ -16,7 +16,7 @@ document.querySelectorAll('.site-nav a[href^="#"]').forEach(link=>link.addEventL
 
 const onboarding=$('[data-onboarding]');
 if(onboarding){
-  let role=sessionStorage.getItem('nawa-onboarding-role')||params.get('role')||'manager';
+  let role=sessionStorage.getItem('khaliya-onboarding-role')||params.get('role')||'manager';
   if(!roles[role])role='manager';
   const roleInfo=roles[role];
   const isManager=role==='manager';
@@ -91,7 +91,7 @@ if(onboarding){
         });
         await updateDoc(userRef,{officeId,officeName,projectIds:[],onboardingComplete:true,updatedAt:serverTimestamp()});
         await setDoc(doc(db,'offices',officeId,'team',current.uid),{id:current.uid,uid:current.uid,userCode:profile.userCode,name:profile.name,email:profile.email,role:profile.role,specialty:profile.specialty||'',officeId,projectIds:[],visibleTo:[current.uid],createdAt:serverTimestamp()});
-        sessionStorage.setItem('nawa-onboarding-office',officeName);
+        sessionStorage.setItem('khaliya-onboarding-office',officeName);
         const inviteEmail=$('[name="teammate"]')?.value.trim().toLowerCase();
         if(inviteEmail){
           const inviteRole=$('[name="inviteRole"]')?.value||'engineer';

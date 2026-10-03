@@ -280,7 +280,7 @@ document.addEventListener('click',async event=>{
     event.preventDefault();
     event.stopImmediatePropagation();
     try{await signOut(auth)}finally{
-      ['nawa-demo-session','nawa-onboarding-role','nawa-onboarding-name','nawa-onboarding-email','nawa-onboarding-office'].forEach(k=>sessionStorage.removeItem(k));
+      ['khaliya-demo-session','khaliya-onboarding-role','khaliya-onboarding-name','khaliya-onboarding-email','khaliya-onboarding-office','nawa-demo-session','nawa-onboarding-role','nawa-onboarding-name','nawa-onboarding-email','nawa-onboarding-office'].forEach(k=>sessionStorage.removeItem(k));
       location.replace('login.html');
     }
     return;

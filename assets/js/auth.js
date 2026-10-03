@@ -120,9 +120,9 @@ document.querySelector('[data-auth="signup"]')?.addEventListener('submit',async 
     };
     await setDoc(doc(db,'users',credential.user.uid),profile);
     saveLocalUser(profile,credential.user);
-    sessionStorage.setItem('nawa-onboarding-role',role);
-    sessionStorage.setItem('nawa-onboarding-name',name);
-    sessionStorage.setItem('nawa-onboarding-email',email);
+    sessionStorage.setItem('khaliya-onboarding-role',role);
+    sessionStorage.setItem('khaliya-onboarding-name',name);
+    sessionStorage.setItem('khaliya-onboarding-email',email);
     location.href='onboarding.html';
   }catch(error){
     console.error(error);
