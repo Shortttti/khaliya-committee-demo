@@ -531,3 +531,34 @@ body{
   .motion-reveal{opacity:1!important;transform:none!important;filter:none!important;transition:none!important}
   .panel,.today-project,.manager-welcome,.manager-project,.task-achievement,.btn,.nav-link{transform:none!important;transition-duration:.01ms!important}
 }
+
+
+/* KHALIYA motion v2 — richer depth, parallax and live feedback */
+.motion-progress{position:fixed;z-index:120;inset:0 0 auto 0;height:2px;pointer-events:none;transform-origin:right center;transform:scaleX(var(--scroll-progress,0));background:linear-gradient(90deg,#c9ab5f,#5da678,#e6dba9);box-shadow:0 0 16px rgba(92,166,120,.5)}
+.khaliya-cursor-aura{position:fixed;z-index:119;left:0;top:0;width:36px;height:36px;border-radius:50%;pointer-events:none;border:1px solid rgba(70,142,101,.22);background:radial-gradient(circle,rgba(94,173,125,.13),transparent 65%);box-shadow:0 0 34px rgba(74,153,108,.12);transition:width .22s ease,height .22s ease,border-color .22s ease,opacity .22s ease;mix-blend-mode:multiply}
+body{transition:opacity .15s ease,filter .15s ease}
+body.page-leaving{opacity:.38;filter:blur(2px)}
+body:before{content:"";position:fixed;z-index:-1;inset:-20%;pointer-events:none;background:conic-gradient(from 20deg at 45% 35%,rgba(39,125,84,.025),transparent 16% 35%,rgba(194,163,85,.03) 48%,transparent 62%);translate:0 calc(var(--bg-drift,0px)*-1);animation:khaliyaMeshSpin 28s linear infinite}
+@keyframes khaliyaMeshSpin{to{transform:rotate(360deg)}}
+.sidebar-wordmark{animation:khaliyaLogoBreath 5.5s ease-in-out infinite}
+@keyframes khaliyaLogoBreath{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.015);filter:drop-shadow(0 6px 10px rgba(89,170,121,.12))}}
+.nav-category>summary{transition:background .25s ease,color .25s ease,transform .25s ease}.nav-category>summary:hover{background:rgba(255,255,255,.035);transform:translateX(-2px)}
+.nav-link[aria-current=page]:after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;right:8px;top:50%;translate:0 -50%;background:#e2c87c;box-shadow:0 0 0 0 rgba(226,200,124,.45);animation:khaliyaNavPulse 2.4s ease-out infinite}
+@keyframes khaliyaNavPulse{65%,100%{box-shadow:0 0 0 8px rgba(226,200,124,0)}}
+.top-search input{transition:width .38s cubic-bezier(.16,.84,.24,1),box-shadow .3s ease,border-color .3s ease,background .3s ease}.top-search:focus-within input{width:min(330px,30vw);box-shadow:0 10px 30px rgba(23,82,56,.1),0 0 0 3px rgba(45,123,82,.08)}
+.display-btn,.icon-btn,.font-btn,.btn,.copy-id-btn{translate:var(--mag-x,0px) var(--mag-y,0px);transition:translate .16s ease,transform .25s ease,box-shadow .25s ease,background .25s ease,border-color .25s ease}
+.page-heading{position:relative;padding-bottom:4px}.page-heading:after{content:"";position:absolute;right:0;bottom:-8px;width:clamp(55px,8vw,110px);height:2px;border-radius:99px;background:linear-gradient(90deg,#3d8d62,#d5bd75,transparent);transform-origin:right;animation:khaliyaHeadingLine 1.4s cubic-bezier(.16,.84,.24,1) both}
+@keyframes khaliyaHeadingLine{from{transform:scaleX(.05);opacity:0}to{transform:scaleX(1);opacity:1}}
+.panel:before,.today-project:before,.manager-project:before{content:"";position:absolute;z-index:2;pointer-events:none;right:-40%;top:0;width:28%;height:1px;background:linear-gradient(90deg,transparent,rgba(61,141,98,.7),transparent);animation:khaliyaPanelSweep 7.5s ease-in-out infinite}
+@keyframes khaliyaPanelSweep{0%,62%{right:-40%;opacity:0}70%{opacity:1}90%,100%{right:115%;opacity:0}}
+.stat-card{transition:translate .35s cubic-bezier(.16,.84,.24,1),box-shadow .35s ease,border-color .35s ease}.stat-card:hover{translate:0 -5px}.stat-card:hover .stat-icon{animation:khaliyaIconPop .48s cubic-bezier(.16,.84,.24,1)}
+@keyframes khaliyaIconPop{50%{transform:scale(1.13) rotate(-5deg)}}
+.stat-value{font-variant-numeric:tabular-nums}
+.progress span,.quantity-project>i>i{position:relative;overflow:hidden}.progress span:after,.quantity-project>i>i:after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 20%,rgba(255,255,255,.55) 50%,transparent 80%);translate:-120% 0;animation:khaliyaProgressGlint 3.4s ease-in-out infinite}
+@keyframes khaliyaProgressGlint{55%,100%{translate:130% 0}}
+.status:before{animation:khaliyaStatusPing 2.3s ease-in-out infinite}@keyframes khaliyaStatusPing{50%{transform:scale(1.45);opacity:.45}}
+.data-table tbody tr{transform-origin:right center}.data-table tbody tr:hover{transform:scale(1.004);box-shadow:0 7px 22px rgba(22,75,52,.045)}
+.modal-backdrop.open .modal{animation:khaliyaModalSpring .42s cubic-bezier(.16,.84,.24,1) both}@keyframes khaliyaModalSpring{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+.toast{animation:khaliyaToastIn .42s cubic-bezier(.16,.84,.24,1),appear .15s}@keyframes khaliyaToastIn{from{opacity:0;transform:translateX(-16px) scale(.96)}to{opacity:1;transform:none}}
+.sidebar-account{position:relative}.sidebar-account:after{content:"";position:absolute;inset:auto 10px -5px 10px;height:22px;background:radial-gradient(ellipse,rgba(98,184,132,.15),transparent 70%);pointer-events:none;animation:khaliyaAccountGlow 4s ease-in-out infinite}@keyframes khaliyaAccountGlow{50%{opacity:.35;transform:scaleX(.85)}}
+@media (prefers-reduced-motion:reduce){body:before,.sidebar-wordmark,.nav-link[aria-current=page]:after,.panel:before,.today-project:before,.manager-project:before,.progress span:after,.quantity-project>i>i:after,.status:before,.sidebar-account:after{animation:none!important}.motion-progress,.khaliya-cursor-aura{display:none!important}body.page-leaving{opacity:1;filter:none}}
