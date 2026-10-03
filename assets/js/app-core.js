@@ -1,7 +1,7 @@
-import './shell.js?v=khaliya-06';
-import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses} from './store.js?v=khaliya-06';
-import englishExtra from './english-extra.js?v=khaliya-06';
-import './interactions.js?v=khaliya-06';
+import './shell.js?v=khaliya-07';
+import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses} from './store.js?v=khaliya-07';
+import englishExtra from './english-extra.js?v=khaliya-07';
+import './interactions.js?v=khaliya-07';
 
 window.KHALIYA_APP_STARTED=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)], page=document.body.dataset.page||'overview';
@@ -411,5 +411,5 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('#modalBackdrop')
 
 document.addEventListener('click',e=>{if(!e.target.closest('.notification-wrap'))closeNotificationPanel()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNotificationPanel()});
 const platformStartupTimer=setTimeout(()=>{if(!platformReady&&!platformError){platformError='PLATFORM-STARTUP-TIMEOUT';render()}},12000);
-import('./platform.js?v=khaliya-06').then(()=>{platformReady=true;platformError=null;clearTimeout(platformStartupTimer);render()}).catch(error=>{console.error('KHALIYA platform failed to start',error);clearTimeout(platformStartupTimer);platformError='PLATFORM-STARTUP-FAILED';render()});
+import('./platform.js?v=khaliya-07').then(()=>{platformReady=true;platformError=null;clearTimeout(platformStartupTimer);render()}).catch(error=>{console.error('KHALIYA platform failed to start',error);clearTimeout(platformStartupTimer);platformError='PLATFORM-STARTUP-FAILED';render()});
 });
