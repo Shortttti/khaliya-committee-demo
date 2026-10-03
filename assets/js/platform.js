@@ -1,5 +1,5 @@
 import { auth, db } from './firebase.js';
-import { bindCloudStore, getState, updateState, makeId } from './store.js?v=khaliya-10';
+import { bindCloudStore, getState, updateState, makeId, flushPendingWrites } from './store.js?v=khaliya-11';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
@@ -96,6 +96,32 @@ try{
   }
 }
 
+async function getOfficeSettings(){
+  if(!profile?.officeId)return null;
+  const snap=await getDoc(doc(db,'offices',profile.officeId));
+  return snap.exists()?{...snap.data(),officeId:profile.officeId}:null;
+}
+
+async function updateOfficeSettings(values={}){
+  if(profile?.role!=='manager'||!profile?.officeId)throw new Error('FORBIDDEN');
+  const name=String(values.name||'').trim();
+  if(!name)throw new Error('OFFICE_NAME_REQUIRED');
+  const patch={
+    name,
+    city:String(values.city||'').trim(),
+    company:String(values.company||'').trim(),
+    officeEmail:String(values.officeEmail||'').trim(),
+    updatedAt:serverTimestamp()
+  };
+  await updateDoc(doc(db,'offices',profile.officeId),patch);
+  await updateDoc(doc(db,'users',user.uid),{officeName:name,updatedAt:serverTimestamp()});
+  profile={...profile,officeName:name};
+  try{localStorage.setItem(profileCacheKey,JSON.stringify({savedAt:Date.now(),profile:cacheProfile(profile)}))}catch{}
+  updateState(state=>{state.settings.office=name;if(state.user)state.user.officeName=name});
+  await flushPendingWrites();
+  return {...patch,officeId:profile.officeId};
+}
+
 async function token(){
   if(!auth.currentUser)throw new Error('AUTH_REQUIRED');
   return auth.currentUser.getIdToken();
@@ -130,8 +156,10 @@ async function ai(module,payload={}){
 }
 
 async function uploadFile(file,options={}){
-  if(!(file instanceof File))throw new Error('File is required');
+  if(!(file instanceof File)||!file.size)throw new Error('FILE_REQUIRED');
+  if(file.size>50*1024*1024)throw new Error('FILE_TOO_LARGE');
   const workspace=getState(),project=workspace.projects.find(item=>item.id===options.projectId);
+  if(profile.role!=='manager'&&!project)throw new Error('PROJECT_REQUIRED');
   const visibleTo=[...new Set([user.uid,...(project?.visibleTo||[]),...(project?.managerUids||[]),...(project?.officeManagerUids||[]),project?.clientUid].filter(Boolean))];
   const headers={
     'Content-Type':file.type||'application/octet-stream',
@@ -144,7 +172,6 @@ async function uploadFile(file,options={}){
   const result=await api('/api/files/upload',{body:file,headers});
   return {...result,storageKey:result.storageKey||result.key||'',fileId:result.fileId||'',visibleTo,ownerUid:user.uid,project};
 }
-
 async function conceptImage(payload){
   return api('/api/ai/concept-image',{
     headers:{'Content-Type':'application/json'},
@@ -288,31 +315,65 @@ document.addEventListener('submit',async event=>{
     const form=event.target;
     const data=new FormData(form);
     const file=data.get('file');
-    if(!(file instanceof File)||!file.size){
-      toast('اختيار ملف للرفع أولًا');
-      return;
-    }
+    const kind=String(data.get('attachmentKind')||'document');
+    if(!(file instanceof File)||!file.size){toast('اختاري ملفًا للرفع أولًا');return}
+    if(file.size>50*1024*1024){toast('حجم الملف أكبر من 50MB. اختاري ملفًا أصغر.');return}
+    const imageExt=/\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(file.name);
+    if(kind==='image'&&!((file.type||'').startsWith('image/')||imageExt)){toast('اختاري صورة بصيغة PNG أو JPG أو WEBP أو GIF أو BMP أو SVG.');return}
+    const selected=String(data.get('project')||'');
+    if(profile.role!=='manager'&&!authorizedProjectId(selected)){toast('اختاري مشروعًا مرتبطًا بحسابك قبل رفع الملف.');return}
     const submit=form.querySelector('[type="submit"]');
+    const statusBox=form.querySelector('[data-upload-status]');
     if(submit){submit.disabled=true;submit.textContent='جارٍ الرفع…'}
+    if(statusBox)statusBox.textContent='يتم رفع الملف إلى التخزين الآمن…';
+    let recordId='';
     try{
-      const selected=String(data.get('project')||'');
-      const result=await uploadFile(file,{
-        projectId:authorizedProjectId(selected)||'unassigned',
-        officeId:profile.officeId||'',
-        visibility:'internal',
-        sourceType:'project-file'
-      });
-      document.querySelector('#modalBackdrop')?.classList.remove('open');
-      toast('تم رفع الملف وإرساله للتحليل والفهرسة');
       const projectId=authorizedProjectId(selected);
-      if(projectId){
-        updateState(state=>state.files.unshift({id:result.fileId||makeId('FILE'),project:projectId,projectId,ownerUid:user.uid,visibleTo:result.visibleTo||[user.uid],name:file.name,code:result.code||makeId('DOC'),discipline:String(data.get('discipline')||''),type:file.name.split('.').pop()?.toUpperCase()||file.type,version:1,updated:new Date().toISOString().slice(0,10),owner:profile.name||user.email,state:result.analysis?'تم التحليل':'جارٍ التحليل',storageKey:result.storageKey||'',downloadUrl:result.downloadUrl||'',analysis:result.analysis||null,visibleTo:result.visibleTo||[user.uid]}));
-      }
-      console.info('KHALIYA upload queued',result);
+      const result=await uploadFile(file,{
+        projectId:projectId||'',
+        officeId:profile.officeId||'',
+        visibility:String(data.get('visibility')||'internal'),
+        sourceType:kind==='image'?'project-image':'project-file'
+      });
+      recordId=result.fileId||makeId('FILE');
+      const record={
+        id:recordId,
+        project:projectId||'',
+        projectId:projectId||'',
+        ownerUid:user.uid,
+        visibleTo:result.visibleTo||[user.uid],
+        name:file.name,
+        code:String(data.get('code')||'').trim()||makeId('DOC'),
+        discipline:String(data.get('discipline')||''),
+        attachmentKind:kind,
+        mimeType:file.type||'application/octet-stream',
+        size:file.size,
+        type:file.name.split('.').pop()?.toUpperCase()||file.type||'FILE',
+        version:1,
+        updated:new Date().toISOString().slice(0,10),
+        owner:profile.name||user.email,
+        state:result.queued?'قيد المعالجة':'تم الرفع',
+        storageKey:result.storageKey||'',
+        downloadUrl:result.downloadUrl||'',
+        analysis:result.analysis||null
+      };
+      updateState(state=>state.files.unshift(record));
+      if(statusBox)statusBox.textContent='تم رفع الملف. جارٍ تثبيت السجل في قاعدة البيانات…';
+      await flushPendingWrites();
+      document.querySelector('#modalBackdrop')?.classList.remove('open');
+      toast('تم رفع الملف وحفظه في مساحة العمل');
+      console.info('KHALIYA upload saved',result);
     }catch(error){
-      toast('تعذر رفع الملف: '+(error.message||'خطأ'));
+      if(recordId)updateState(state=>{state.files=state.files.filter(item=>item.id!==recordId)});
+      console.error('KHALIYA upload failed',error);
+      const message=error.message==='FILE_TOO_LARGE'?'حجم الملف يتجاوز الحد المسموح.':
+        error.message==='PROJECT_REQUIRED'?'اختاري مشروعًا مرتبطًا بالحساب.':
+        error.status===403?'لا توجد صلاحية لرفع هذا الملف إلى المشروع المحدد.':
+        (error.message||'خطأ غير معروف');
+      if(statusBox)statusBox.textContent='فشل الرفع: '+message;
+      toast('تعذر رفع الملف: '+message);
     }finally{
-      if(submit){submit.disabled=false;submit.textContent='حفظ'}
+      if(submit){submit.disabled=false;submit.textContent='رفع وحفظ'}
     }
   }
 },true);
@@ -428,6 +489,8 @@ window.KHALIYA_PLATFORM=Object.freeze({
   addProjectMembership,
   createInvite,
   reserveConsultantSlot,
+  getOfficeSettings,
+  updateOfficeSettings,
   currentContext,
   refreshToken:()=>auth.currentUser?.getIdToken(true),
   signOut:()=>signOut(auth)
