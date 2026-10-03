@@ -8,6 +8,6 @@ function showBootError(code){
   if(topbar&&!topbar.innerHTML)topbar.innerHTML='<div style="padding:20px;color:#17382d">مساحة العمل · خلية | KHALIYA</div>';
 }
 setTimeout(()=>{if(!window.KHALIYA_APP_STARTED)showBootError('APP-MODULE-TIMEOUT')},12000);
-import('./app-core.js?v=khaliya-08')
-  .then(()=>import('./platform.js?v=khaliya-08'))
+import('./app-core.js?v=khaliya-09')
+  .then(()=>import('./platform.js?v=khaliya-09'))
   .catch(error=>{console.error('KHALIYA app startup failed',error);showBootError('APP-MODULE-LOAD')});
