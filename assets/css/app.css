@@ -813,7 +813,7 @@ input[type="date"],input[type="time"],select{cursor:pointer}
   font-family:Arial,Tahoma,sans-serif;
   line-height:1.7;
 }
-.khaliya-pdf-sheet>header{display:flex;align-items:center;justify-content:space-between;gap:28px;border-bottom:2px solid #1f7a55;padding-bottom:20px;margin-bottom:18px}
+.khaliya-pdf-sheet>header{display:flex;direction:ltr;align-items:center;justify-content:space-between;gap:28px;border-bottom:2px solid #1f7a55;padding-bottom:20px;margin-bottom:18px;break-inside:avoid;page-break-inside:avoid}.khaliya-pdf-sheet>header>div{direction:rtl;text-align:right}.khaliya-pdf-header-logo{width:165px;height:auto;object-fit:contain;flex:0 0 auto}
 .khaliya-pdf-sheet>header>img{width:165px;height:auto;object-fit:contain}
 .khaliya-pdf-sheet h1{font-size:26px;margin:0 0 4px;color:#174b37}
 .khaliya-pdf-sheet h2{font-size:17px;margin:26px 0 10px;color:#174b37}
@@ -826,6 +826,17 @@ input[type="date"],input[type="time"],select{cursor:pointer}
 .khaliya-pdf-sheet>footer{margin-top:30px;padding-top:12px;border-top:1px solid #dce5df;text-align:center;font-size:9px;color:#6e7d74}
 .khaliya-pdf-watermark{position:absolute;inset:285px 170px auto;opacity:.035;pointer-events:none}.khaliya-pdf-watermark img{width:430px;max-width:100%}
 
+.office-invite-banner{display:grid;grid-template-columns:48px minmax(0,1fr) 42px;align-items:center;gap:14px;margin:0 0 16px;padding:15px 18px;border:1px solid #cbded1;border-radius:16px;background:linear-gradient(110deg,#f8fbf8,#eef6f0);box-shadow:0 8px 22px #17382d0b}
+.office-invite-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:#174b37;color:#fff}
+.office-invite-icon svg{width:23px;height:23px}
+.office-invite-copy{display:grid;gap:4px;min-width:0}
+.office-invite-copy small{font-size:11px;color:#60786a}
+.office-invite-copy strong{font:700 15px var(--font-en);color:#174b37;overflow-wrap:anywhere;direction:ltr;text-align:right}
+.office-invite-copy p{margin:0;font-size:11px;color:#738078}
+.office-invite-copy-button{display:grid;place-items:center;width:40px;height:40px;border:1px solid #cadbd0;border-radius:12px;background:#fff;color:#174b37;cursor:pointer}
+.office-invite-copy-button:hover{background:#174b37;color:#fff}
+.office-invite-copy-button svg{width:18px;height:18px}
+@media(max-width:600px){.office-invite-banner{grid-template-columns:40px minmax(0,1fr) 38px;padding:12px;gap:10px}.office-invite-icon{width:40px;height:40px}.office-invite-copy strong{font-size:12px}}
 @media(min-width:901px){
   .sidebar{display:flex!important;visibility:visible!important;opacity:1!important;transform:none!important}
   .menu-backdrop{display:none!important}

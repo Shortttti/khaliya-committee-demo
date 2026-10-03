@@ -1,4 +1,4 @@
-document.querySelector('link[href*="assets/css/app.css"]')?.setAttribute('href','assets/css/app.css?v=khaliya-prod-02');
+document.querySelector('link[href*="assets/css/app.css"]')?.setAttribute('href','assets/css/app.css?v=khaliya-prod-03');
 const root=document.getElementById('appContent');
 const brand='<span style="display:inline-grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#174b37;color:#fff;font-weight:800;margin-inline-end:10px">خ</span><span style="font-weight:800;color:#174b37">خلية <small style="display:block;font-size:.68em;letter-spacing:.12em">KHALIYA</small></span>';
 function showBootError(code){
@@ -10,7 +10,7 @@ function showBootError(code){
 }
 setTimeout(()=>{if(!window.KHALIYA_APP_STARTED)showBootError('APP-MODULE-TIMEOUT')},8000);
 Promise.all([
-  import('./app-core.js?v=khaliya-17'),
+  import('./app-core.js?v=khaliya-18'),
   import('./platform.js?v=khaliya-15')
 ]).then(()=>window.dispatchEvent(new Event('khaliya:platform-ready')))
   .catch(error=>{console.error('KHALIYA app startup failed',error);showBootError('APP-MODULE-LOAD')});
