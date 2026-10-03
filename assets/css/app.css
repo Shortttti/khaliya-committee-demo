@@ -783,3 +783,50 @@ body.page-leaving{opacity:1!important;filter:none!important}
   .invite-record{align-items:flex-start;flex-direction:column}
   .invite-record-actions{width:100%;justify-content:space-between}
 }
+
+
+/* Production stability: forms, sidebar and generated PDF */
+.form-grid input,
+.form-grid select,
+.form-grid textarea{
+  pointer-events:auto!important;
+  touch-action:manipulation;
+}
+.form-grid input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.form-grid select{min-height:42px}
+.form-grid textarea{min-height:96px;resize:vertical}
+input[type="date"],input[type="time"],select{cursor:pointer}
+.consultation-create{scroll-margin-top:92px}
+[data-upload-status]{min-height:38px;display:flex;align-items:center}
+
+.khaliya-pdf-sheet{
+  position:fixed;
+  z-index:-1000;
+  left:-12000px;
+  top:0;
+  width:794px;
+  min-height:1123px;
+  padding:54px;
+  background:#fff;
+  color:#17382d;
+  direction:rtl;
+  font-family:Arial,Tahoma,sans-serif;
+  line-height:1.7;
+}
+.khaliya-pdf-sheet>header{display:flex;align-items:center;justify-content:space-between;gap:28px;border-bottom:2px solid #1f7a55;padding-bottom:20px;margin-bottom:18px}
+.khaliya-pdf-sheet>header>img{width:165px;height:auto;object-fit:contain}
+.khaliya-pdf-sheet h1{font-size:26px;margin:0 0 4px;color:#174b37}
+.khaliya-pdf-sheet h2{font-size:17px;margin:26px 0 10px;color:#174b37}
+.khaliya-pdf-meta{display:flex;justify-content:space-between;gap:14px;font-size:11px;color:#5d6f65;margin-bottom:18px}
+.khaliya-pdf-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+.khaliya-pdf-stats article{border:1px solid #dce9e0;border-radius:12px;padding:12px;background:#f7fbf8;display:grid;gap:2px}
+.khaliya-pdf-stats b{font-size:19px;color:#1f7a55}.khaliya-pdf-stats span{font-size:10px;color:#617168}
+.khaliya-pdf-sheet table{width:100%;border-collapse:collapse;font-size:11px}.khaliya-pdf-sheet th,.khaliya-pdf-sheet td{border:1px solid #dce5df;padding:8px;text-align:right}.khaliya-pdf-sheet th{background:#edf6f0;color:#174b37}
+.khaliya-pdf-sheet ul{padding-inline-start:20px;font-size:11px}
+.khaliya-pdf-sheet>footer{margin-top:30px;padding-top:12px;border-top:1px solid #dce5df;text-align:center;font-size:9px;color:#6e7d74}
+.khaliya-pdf-watermark{position:absolute;inset:285px 170px auto;opacity:.035;pointer-events:none}.khaliya-pdf-watermark img{width:430px;max-width:100%}
+
+@media(min-width:901px){
+  .sidebar{display:flex!important;visibility:visible!important;opacity:1!important;transform:none!important}
+  .menu-backdrop{display:none!important}
+}
