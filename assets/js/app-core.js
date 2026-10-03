@@ -1,7 +1,7 @@
-import './shell.js?v=khaliya-07';
-import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses} from './store.js?v=khaliya-07';
-import englishExtra from './english-extra.js?v=khaliya-07';
-import './interactions.js?v=khaliya-07';
+import './shell.js?v=khaliya-09';
+import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses} from './store.js?v=khaliya-09';
+import englishExtra from './english-extra.js?v=khaliya-09';
+import './interactions.js?v=khaliya-09';
 
 window.KHALIYA_APP_STARTED=true;
 window.addEventListener('khaliya:platform-ready',()=>{platformReady=true;platformError=null;render()});
@@ -196,7 +196,7 @@ function render(){
  }
  const activeUser=getState().user;
  if(!platformReady||!activeUser){
-  content.innerHTML='<section class="panel panel-pad" role="status"><span class="section-eyebrow">خلية | KHALIYA</span><h1>جارٍ تحميل مساحة العمل</h1><p>نتحقق من الحساب ونحمّل المشاريع والصلاحيات.</p><div class="loading-bar" aria-hidden="true"></div></section>';
+  content.innerHTML='<div class="workspace-boot" role="status" aria-label="جارٍ تجهيز مساحة العمل"><i></i><i></i><i></i></div>';
   return;
  }
  try{
