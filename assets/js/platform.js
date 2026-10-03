@@ -1,4 +1,4 @@
-import { auth, db } from './firebase.js?v=khaliya-03';
+import { auth, db } from './firebase.js';
 import { bindCloudStore, getState, updateState, makeId } from './store.js?v=khaliya-03';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
