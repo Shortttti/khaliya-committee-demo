@@ -830,3 +830,12 @@ input[type="date"],input[type="time"],select{cursor:pointer}
   .sidebar{display:flex!important;visibility:visible!important;opacity:1!important;transform:none!important}
   .menu-backdrop{display:none!important}
 }
+
+/* Linked office identity in the workspace header */
+.linked-office{display:flex;align-items:center;gap:9px;max-width:220px;min-width:0;padding:7px 11px;border:1px solid var(--line,#dce7df);border-radius:14px;background:var(--surface,#fff);color:var(--ink,#17382d)}
+.linked-office-icon{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:11px;background:rgba(31,122,85,.1);color:#1f7a55}
+.linked-office-icon svg{width:18px;height:18px}
+.linked-office>span:last-child{display:grid;min-width:0;line-height:1.3}
+.linked-office small{font-size:10px;color:var(--muted,#687b70)}
+.linked-office strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+@media(max-width:720px){.linked-office{max-width:150px;padding:5px 7px;gap:6px}.linked-office-icon{width:28px;height:28px;flex-basis:28px}.linked-office strong{font-size:11px}}
