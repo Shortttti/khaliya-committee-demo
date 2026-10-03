@@ -640,3 +640,11 @@ body{
 .khaliya-ambient i:nth-child(1){background:radial-gradient(circle,rgba(55,153,102,.17),transparent 68%)}
 .khaliya-ambient i:nth-child(2){background:radial-gradient(circle,rgba(61,111,159,.12),transparent 70%)}
 .khaliya-ambient i:nth-child(3){background:radial-gradient(circle,rgba(190,155,72,.12),transparent 70%)}
+
+
+/* KHALIYA steady mode — eliminate idle bouncing while keeping intentional transitions */
+body:not(.page-entering) *{animation:none!important}
+body:not(.page-entering) .motion-ripple{animation:khaliyaRipple .62s ease-out forwards!important}
+body:not(.page-entering) .motion-reveal{transition:opacity .72s cubic-bezier(.16,.84,.24,1) var(--reveal-delay,0ms),transform .72s cubic-bezier(.16,.84,.24,1) var(--reveal-delay,0ms),filter .72s ease var(--reveal-delay,0ms)!important}
+body:not(.page-entering) .modal-backdrop.open .modal{animation:khaliyaModalSpring .42s cubic-bezier(.16,.84,.24,1) both!important}
+body:not(.page-entering) .toast{animation:khaliyaToastIn .42s cubic-bezier(.16,.84,.24,1)!important}
