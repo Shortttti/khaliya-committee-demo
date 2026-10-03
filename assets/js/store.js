@@ -3,11 +3,11 @@ import {
   collection, doc, deleteDoc, onSnapshot, query, setDoc, where, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
-const COLLECTIONS=['projects','tasks','changes','files','approvals','team','activity','notifications','clientRequests','consultations','decisions','meetings','schedule','timeline','quantities','chat'];
+const COLLECTIONS=['projects','tasks','changes','files','approvals','team','activity','notifications','clientRequests','consultations','decisions','meetings','schedule','timeline','quantities','chat','meetingRequests'];
 const defaults=()=>({
   user:null,role:'engineer',language:'ar',projects:[],tasks:[],changes:[],files:[],
   approvals:[],team:[],activity:[],notifications:[],clientRequests:[],consultations:[],
-  decisions:[],meetings:[],schedule:[],timeline:[],quantities:[],chat:[],
+  decisions:[],meetings:[],schedule:[],timeline:[],quantities:[],chat:[],meetingRequests:[],
   settings:{office:'',project:'',currency:'SAR',theme:'light',language:'ar',fontSize:'normal'}
 });
 let state=defaults(), profile=null, stop=[];
