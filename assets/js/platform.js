@@ -133,7 +133,7 @@ async function uploadFile(file,options={}){
   if(!(file instanceof File))throw new Error('File is required');
   const workspace=getState(),project=workspace.projects.find(item=>item.id===options.projectId);
   const visibleTo=[...new Set([user.uid,...(project?.visibleTo||[]),...(project?.managerUids||[]),...(project?.officeManagerUids||[]),project?.clientUid].filter(Boolean))];
-  const headers={'Content-Type':file.type||'application/octet-stream','X-File-Name':encodeURIComponent(file.name),'X-Project-Id':options.projectId||'unassigned','X-Visibility':options.visibility||'internal','X-Source-Type':options.sourceType||'project-file'};
+  const headers={'Content-Type':file.type||'application/octet-stream','X-File-Name':encodeURIComponent(file.name),'X-Project-Id':options.projectId||'unassigned','X-Visibility':options.visibility||'internal','X-Source-Type':options.sourceType||'project-file','X-Attachment-Kind':options.kind||'document'};
   if(options.officeId)headers['X-Office-Id']=options.officeId;
   const idToken=await token();
   const result=await new Promise((resolve,reject)=>{
