@@ -39,6 +39,9 @@ service cloud.firestore {
           && (resource.data.requestedByUid == request.auth.uid || resource.data.consultantUid == request.auth.uid))
         || (collectionName == 'consultations' && inOffice(officeId)
           && resource.data.consultantUid == request.auth.uid)
+        || (collectionName == 'files' && inOffice(officeId) && visibleToMe()
+          && resource.data.consultationId is string
+          && get(/databases/$(database)/documents/offices/$(officeId)/consultations/$(resource.data.consultationId)).data.consultantUid == request.auth.uid)
         || (inOffice(officeId) && visibleToMe()
           && (!('projectId' in resource.data) || resource.data.projectId == ''
             || projectMember(resource.data.projectId)));
