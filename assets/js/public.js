@@ -116,6 +116,7 @@ if(onboarding){
         await updateDoc(doc(db,'publicInvites',inviteCode),{acceptedBy:current.uid,status:'accepted',acceptedAt:serverTimestamp()});
         await updateDoc(userRef,{officeId,officeName:invite.officeName||'',projectIds:invite.projectIds||[],onboardingComplete:true,inviteCode,updatedAt:serverTimestamp()});
         await setDoc(doc(db,'offices',officeId,'team',current.uid),{id:current.uid,uid:current.uid,userCode:profile.userCode,name:profile.name,email:profile.email,role:profile.role,specialty:profile.specialty||'',officeId,projectIds:invite.projectIds||[],visibleTo:[current.uid],createdAt:serverTimestamp()});
+        if(role==='consultant')await setDoc(doc(db,'offices',officeId,'consultants',current.uid),{id:current.uid,uid:current.uid,name:profile.name,specialty:profile.specialty||'',available:true,officeId,visibleTo:[current.uid],createdAt:serverTimestamp()});
       }
       location.href=role==='client'?'client.html':role==='consultant'?'consultations.html':'home.html';
     }catch(error){
