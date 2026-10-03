@@ -23,6 +23,10 @@ service cloud.firestore {
     function canReadOfficeRecord(officeId, collectionName) {
       return officeManager(officeId)
         || (collectionName == 'consultants' && inOffice(officeId))
+        || (collectionName == 'consultantSlots' && inOffice(officeId)
+          && (resource.data.requestedByUid == request.auth.uid || resource.data.consultantUid == request.auth.uid))
+        || (collectionName == 'consultations' && inOffice(officeId)
+          && resource.data.consultantUid == request.auth.uid)
         || (inOffice(officeId) && visibleToMe()
           && (!('projectId' in resource.data) || resource.data.projectId == ''
             || projectMember(resource.data.projectId)));
