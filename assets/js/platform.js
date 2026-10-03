@@ -1,5 +1,5 @@
 import { auth, db } from './firebase.js';
-import { bindCloudStore, getState, updateState, makeId } from './store.js?v=khaliya-05';
+import { bindCloudStore, getState, updateState, makeId } from './store.js?v=khaliya-06';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
@@ -50,6 +50,10 @@ try{
   if(!snap.exists())throw new Error('PROFILE_NOT_FOUND');
   profile={...profile,...snap.data()};
   if(!['manager','pm','engineer','client','consultant'].includes(profile.role))throw new Error('INVALID_PROFILE_ROLE');
+  if(profile.onboardingComplete===false||!profile.officeId){
+    location.replace('onboarding.html');
+    await new Promise(()=>{});
+  }
   bindCloudStore(profile);
 }catch(error){
   console.error('KHALIYA profile unavailable',error);

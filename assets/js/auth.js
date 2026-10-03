@@ -1,4 +1,4 @@
-import './interactions.js?v=khaliya-color-01';
+import './interactions.js?v=khaliya-06';
 import { auth, db } from './firebase.js';
 import {
   createUserWithEmailAndPassword,
@@ -57,8 +57,14 @@ document.querySelector('[data-auth="login"]')?.addEventListener('submit',async e
     const credential=await signInWithEmailAndPassword(auth,email,password);
     const snap=await getDoc(doc(db,'users',credential.user.uid));
     if(!snap.exists())throw new Error('PROFILE_NOT_FOUND');
-    const role=saveLocalUser(snap.data(),credential.user);
-    location.href=role==='client'?'client.html':'home.html';
+    const profile=snap.data();
+    const role=saveLocalUser(profile,credential.user);
+    if(profile.onboardingComplete===false||!profile.officeId){
+      sessionStorage.setItem('khaliya-onboarding-role',role);
+      location.href='onboarding.html';
+      return;
+    }
+    location.href=role==='client'?'client.html':role==='consultant'?'consultations.html':'home.html';
   }catch(error){
     console.error(error);
     const code=error?.code||'';

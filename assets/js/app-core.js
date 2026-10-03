@@ -1,7 +1,7 @@
-import './shell.js?v=khaliya-05';
-import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses} from './store.js?v=khaliya-05';
-import englishExtra from './english-extra.js?v=khaliya-05';
-import './interactions.js?v=khaliya-05';
+import './shell.js?v=khaliya-06';
+import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses} from './store.js?v=khaliya-06';
+import englishExtra from './english-extra.js?v=khaliya-06';
+import './interactions.js?v=khaliya-06';
 
 window.KHALIYA_APP_STARTED=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)], page=document.body.dataset.page||'overview';
@@ -172,7 +172,7 @@ function modulePage(){
  if(page==='meetings'&&role==='client'){
    content.insertAdjacentHTML('beforeend','<section class="panel panel-pad" id="meetingRequestForm"><div class="panel-head"><div><h2>طلب اجتماع</h2><p>اقترح وقتًا وحدد الشخص الذي ترغب بمقابلته.</p></div></div><form id="clientMeetingRequestForm" class="form-grid"><label class="field"><span>المشروع</span><select name="project" required>'+s.projects.filter(p=>p.clientUid===s.user?.uid).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('')+'</select></label><label class="field"><span>مع من؟</span><select name="personUid" required>'+s.projects.filter(p=>p.clientUid===s.user?.uid).map(p=>'<option value="'+esc(p.managerUid||'')+'">'+esc(p.manager||'مدير المشروع')+'</option>').join('')+'</select></label><label class="field"><span>التاريخ المقترح</span><input name="date" type="date" required></label><label class="field"><span>الوقت المقترح</span><input name="time" type="time" required></label><label class="field full"><span>سبب الاجتماع</span><textarea name="reason" required></textarea></label><div class="field full"><button class="btn btn-primary" type="submit">إرسال طلب الاجتماع</button></div></form></section>');
  }
-}const views={overview,home:overview,clientRequests,'client-requests':clientRequests,projects,workspace,changes,thread,tasks,files,approvals,team,client,ai,reports,settings,consultations,decisions:modulePage,meetings:modulePage,clients:modulePage,schedule:modulePage,boq:modulePage,timeline:modulePage};
+}const views={overview,home:overview,clientRequests,'client-requests':clientRequests,projects,workspace,changes,thread,tasks,files,approvals,team,client,ai,reports,settings,consultations:modulePage,decisions:modulePage,meetings:modulePage,clients:modulePage,schedule:modulePage,boq:modulePage,timeline:modulePage};
 function notificationItems(){
  const s=getState(),user=s.user||{},role=user.role||'',uid=user.uid;
  const items=(s.notifications||[]).filter(n=>n.recipientUid===uid||(n.visibleTo||[]).includes(uid)).map(n=>({...n,seen:(n.readBy||[]).includes(uid)||!!n.seen,href:n.type==='اعتماد'?'approvals.html':n.type==='مهمة'?'tasks.html':n.type==='اجتماع'?'meetings.html':n.type==='طلب عميل'?'client-requests.html':n.type==='استشارة'?'consultations.html':'thread.html'}));
@@ -411,5 +411,5 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('#modalBackdrop')
 
 document.addEventListener('click',e=>{if(!e.target.closest('.notification-wrap'))closeNotificationPanel()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNotificationPanel()});
 const platformStartupTimer=setTimeout(()=>{if(!platformReady&&!platformError){platformError='PLATFORM-STARTUP-TIMEOUT';render()}},12000);
-import('./platform.js?v=khaliya-05').then(()=>{platformReady=true;platformError=null;clearTimeout(platformStartupTimer);render()}).catch(error=>{console.error('KHALIYA platform failed to start',error);clearTimeout(platformStartupTimer);platformError='PLATFORM-STARTUP-FAILED';render()});
+import('./platform.js?v=khaliya-06').then(()=>{platformReady=true;platformError=null;clearTimeout(platformStartupTimer);render()}).catch(error=>{console.error('KHALIYA platform failed to start',error);clearTimeout(platformStartupTimer);platformError='PLATFORM-STARTUP-FAILED';render()});
 });

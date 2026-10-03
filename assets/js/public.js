@@ -1,4 +1,4 @@
-import './interactions.js?v=khaliya-color-01';
+import './interactions.js?v=khaliya-06';
 import { auth, db } from './firebase.js';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
@@ -70,10 +70,11 @@ if(onboarding){
 
   onboarding.addEventListener('submit',async event=>{
     event.preventDefault();
-    const current=auth.currentUser,feedback=$('.invite-feedback'),submit=event.target.querySelector('[type="submit"]');
+    const current=auth.currentUser,feedback=$('[data-onboard-feedback]')||$('.invite-feedback'),submit=event.target.querySelector('[type="submit"]');
     if(officeReady){location.href='home.html';return;}
     if(!current){if(feedback)feedback.textContent='انتهت جلسة التسجيل. سجّل الدخول ثم أكمل الإعداد.';return;}
     if(submit){submit.disabled=true;submit.textContent='جارٍ الحفظ…';}
+    const saveGuard=setTimeout(()=>{if(submit?.disabled){if(feedback)feedback.textContent='الاتصال بقاعدة البيانات يتأخر. تحققي من الإنترنت ثم أعيدي المحاولة؛ قد يكون الحفظ ما زال جاريًا.';submit.disabled=false;submit.textContent='إعادة المحاولة';}},20000);
     try{
       const userRef=doc(db,'users',current.uid);
       const userSnap=await getDoc(userRef);
@@ -131,8 +132,10 @@ if(onboarding){
         ROLE_MISMATCH:'نوع الحساب لا يطابق ملف التسجيل.',
         PROFILE_MISSING:'لم يُعثر على ملف الحساب في قاعدة البيانات.'
       };
-      if(feedback)feedback.textContent=messages[error.message]||'تعذر حفظ الإعداد. تحقق من قواعد Firestore وحاول مجددًا.';
+      const message=error.message==='CLOUD_TIMEOUT'?'انتهت مهلة الاتصال بقاعدة البيانات. تحققي من الاتصال ثم أعيدي المحاولة.':error.code==='permission-denied'?'قواعد Firestore لا تسمح بحفظ مساحة المكتب. يلزم مراجعة صلاحيات قاعدة البيانات.':messages[error.message]||'تعذر حفظ الإعداد. تحقق من الاتصال وصلاحيات قاعدة البيانات ثم حاول مجددًا.';
+      if(feedback)feedback.textContent=message;
     }finally{
+      clearTimeout(saveGuard);
       if(submit){submit.disabled=false;submit.textContent=officeReady?'المتابعة إلى مساحة العمل':'الدخول إلى مساحة العمل';}
     }
   });
