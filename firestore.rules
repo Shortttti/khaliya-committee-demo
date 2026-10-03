@@ -20,7 +20,7 @@ service cloud.firestore {
     function visibleToMe() {
       return resource.data.visibleTo is list && request.auth.uid in resource.data.visibleTo;
     }
-    function canReadOfficeRecord(officeId) {
+    function canReadOfficeRecord(officeId, collectionName) {
       return officeManager(officeId)
         || (collectionName == 'consultants' && inOffice(officeId))
         || (inOffice(officeId) && visibleToMe()
@@ -81,7 +81,7 @@ service cloud.firestore {
       allow delete: if false;
 
       match /{collectionName}/{recordId} {
-        allow read: if canReadOfficeRecord(officeId);
+        allow read: if canReadOfficeRecord(officeId, collectionName);
         allow create: if inOffice(officeId)
           && request.resource.data.officeId == officeId
           && request.resource.data.id == recordId
