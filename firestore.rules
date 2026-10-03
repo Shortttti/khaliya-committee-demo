@@ -87,7 +87,7 @@ service cloud.firestore {
           && request.resource.data.visibleTo is list
           && (
             officeManager(officeId)
-            || (collectionName == 'files' && hasRole('engineer')
+            || (collectionName == 'files' && me().role in ['engineer', 'pm', 'client']
               && projectMember(request.resource.data.projectId)
               && request.resource.data.ownerUid == request.auth.uid)
             || (collectionName == 'clientRequests' && hasRole('client')
