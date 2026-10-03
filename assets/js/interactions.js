@@ -201,3 +201,22 @@ ensureCinematicLayers();
 prepareCinematicSections();
 syncCinematicSections();
 pageEnter();
+
+/* KHALIYA link prefetch */
+const prefetchedInternalLinks=new Set();
+function prefetchInternalLink(link){
+  if(!link?.href)return;
+  const url=new URL(link.href,location.href);
+  if(url.origin!==location.origin||url.href===location.href||prefetchedInternalLinks.has(url.href))return;
+  if(!/\.html(?:$|\?)/.test(url.pathname+url.search))return;
+  prefetchedInternalLinks.add(url.href);
+  const hint=document.createElement('link');
+  hint.rel='prefetch';
+  hint.href=url.href;
+  hint.as='document';
+  document.head.append(hint);
+}
+document.addEventListener('pointerover',event=>prefetchInternalLink(event.target.closest('a[href]')),{passive:true});
+document.addEventListener('touchstart',event=>prefetchInternalLink(event.target.closest('a[href]')),{passive:true});
+const prefetchVisible=()=>document.querySelectorAll('.sidebar a[href],.topbar a[href]').forEach((link,index)=>{if(index<8)prefetchInternalLink(link)});
+if('requestIdleCallback'in window)requestIdleCallback(prefetchVisible,{timeout:1200});else setTimeout(prefetchVisible,500);
