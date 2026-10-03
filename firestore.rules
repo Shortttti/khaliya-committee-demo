@@ -2,29 +2,162 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
     function signedIn() {
       return request.auth != null;
     }
 
-    function isSelf(uid) {
-      return signedIn() && request.auth.uid == uid;
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function me() {
+      return get(userPath(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return signedIn() && me().role == role;
+    }
+
+    function inOffice(officeId) {
+      return signedIn() && me().officeId == officeId;
+    }
+
+    function officeManager(officeId) {
+      return inOffice(officeId) && me().role == 'manager';
+    }
+
+    function projectMember(projectId) {
+      return signedIn()
+        && me().projectIds is list
+        && projectId in me().projectIds;
+    }
+
+    function visibleToMe() {
+      return resource.data.visibleTo is list
+        && request.auth.uid in resource.data.visibleTo;
+    }
+
+    function canReadOfficeRecord(officeId) {
+      return officeManager(officeId)
+        || (inOffice(officeId) && visibleToMe()
+          && (resource.data.projectId == null
+            || resource.data.projectId == ''
+            || projectMember(resource.data.projectId)));
+    }
+
+    function managerOrProjectManager(officeId, projectId) {
+      return officeManager(officeId)
+        || (inOffice(officeId) && hasRole('pm') && projectMember(projectId));
+    }
+
+    function recordBelongsToOffice(officeId) {
+      return request.resource.data.officeId == officeId;
     }
 
     match /users/{uid} {
-      allow create: if isSelf(uid)
+      allow create: if signedIn()
+        && request.auth.uid == uid
         && request.resource.data.uid == uid
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.role in ['manager', 'pm', 'engineer', 'client'];
+        && request.resource.data.role in ['manager', 'pm', 'engineer', 'client', 'consultant']
+        && request.resource.data.userCode == 'KHL-' + uid;
 
-      allow read: if isSelf(uid);
+      allow read: if signedIn() && request.auth.uid == uid;
 
-      allow update: if isSelf(uid)
+      allow update: if signedIn()
+        && request.auth.uid == uid
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.email == resource.data.email
-        && request.resource.data.role == resource.data.role;
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.userCode == resource.data.userCode
+        && request.resource.data.officeId == resource.data.officeId
+        && request.resource.data.projectIds == resource.data.projectIds;
 
       allow delete: if false;
+    }
+
+    match /offices/{officeId} {
+      allow create: if signedIn()
+        && hasRole('manager')
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.officeId == officeId;
+
+      allow read: if inOffice(officeId);
+
+      allow update: if officeManager(officeId)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.officeId == resource.data.officeId;
+
+      allow delete: if false;
+
+      match /invites/{inviteId} {
+        allow read: if officeManager(officeId)
+          || (signedIn() && resource.data.email == request.auth.token.email);
+        allow create, update, delete: if officeManager(officeId);
+      }
+
+      match /{collectionName}/{recordId} {
+        allow read: if canReadOfficeRecord(officeId);
+
+        allow create: if inOffice(officeId)
+          && recordBelongsToOffice(officeId)
+          && request.resource.data.id == recordId
+          && request.resource.data.visibleTo is list
+          && (
+            officeManager(officeId)
+            || (collectionName == 'clientRequests'
+              && hasRole('client')
+              && request.resource.data.clientUid == request.auth.uid
+              && projectMember(request.resource.data.projectId))
+            || (collectionName == 'consultations'
+              && me().role in ['client', 'engineer', 'pm', 'consultant']
+              && request.resource.data.requesterUid == request.auth.uid
+              && projectMember(request.resource.data.projectId))
+            || (collectionName == 'meetings'
+              && managerOrProjectManager(officeId, request.resource.data.projectId))
+            || (collectionName == 'chat'
+              && projectMember(request.resource.data.projectId)
+              && request.resource.data.authorUid == request.auth.uid)
+          );
+
+        allow update: if inOffice(officeId)
+          && recordBelongsToOffice(officeId)
+          && resource.data.id == recordId
+          && (
+            officeManager(officeId)
+            || (collectionName == 'tasks'
+              && managerOrProjectManager(officeId, resource.data.projectId))
+            || (collectionName == 'tasks'
+              && hasRole('engineer')
+              && projectMember(resource.data.projectId)
+              && resource.data.assigneeUid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['status', 'progress', 'completionNote', 'updatedAt']))
+            || (collectionName == 'clientRequests'
+              && managerOrProjectManager(officeId, resource.data.projectId))
+            || (collectionName == 'approvals'
+              && managerOrProjectManager(officeId, resource.data.projectId))
+            || (collectionName == 'approvals'
+              && hasRole('client')
+              && resource.data.clientUid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['status', 'clientComment', 'updatedAt']))
+            || (collectionName == 'consultations'
+              && (resource.data.requesterUid == request.auth.uid
+                || resource.data.consultantUid == request.auth.uid))
+            || (collectionName == 'meetings'
+              && managerOrProjectManager(officeId, resource.data.projectId))
+            || (collectionName == 'chat'
+              && resource.data.authorUid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['text', 'updatedAt']))
+          );
+
+        allow delete: if officeManager(officeId)
+          || (collectionName == 'chat'
+            && inOffice(officeId)
+            && resource.data.authorUid == request.auth.uid);
+      }
     }
 
     match /{document=**} {
