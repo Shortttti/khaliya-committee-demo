@@ -229,6 +229,8 @@ test('project manager store queries can read office team and only assigned proje
   });
   const db = testEnv.authenticatedContext('pm-reader', { email: 'pm@example.com' }).firestore();
   await assertSucceeds(getDoc(doc(db, 'offices', officeId)));
+  assert.equal((await assertSucceeds(getDoc(doc(db, 'users', 'pm-reader')))).data().role, 'pm');
+  await assertSucceeds(getDoc(doc(db, 'offices', officeId, 'team', 'engineer-member')));
   const team = await assertSucceeds(getDocs(query(
     collection(db, 'offices', officeId, 'team'), where('officeId', '==', officeId)
   )));
