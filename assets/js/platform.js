@@ -1,5 +1,5 @@
 import { auth, db } from './firebase.js';
-import { bindCloudStore, getState, updateState, makeId } from './store.js?v=khaliya-09';
+import { bindCloudStore, getState, updateState, makeId } from './store.js?v=khaliya-10';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
@@ -398,7 +398,7 @@ async function createInvite(email,role,projectIds=[]){
   if(profile.role!=='manager')throw new Error('FORBIDDEN');
   const normalized=String(email||'').trim().toLowerCase();
   if(!normalized||!['pm','engineer','client','consultant'].includes(role))throw new Error('INVALID_INVITE');
-  const code='KHL-'+crypto.randomUUID().replaceAll('-','').slice(0,10).toUpperCase();
+  const code='KHALIYA-INV-'+crypto.randomUUID().replaceAll('-','').slice(0,8).toUpperCase();
   await setDoc(doc(db,'publicInvites',code),{
     officeId:profile.officeId,officeName:profile.officeName||'',
     email:normalized,role,projectIds,createdByUid:user.uid,

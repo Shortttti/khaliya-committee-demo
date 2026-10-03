@@ -759,3 +759,27 @@ body.page-leaving{opacity:1!important;filter:none!important}
   background:var(--surface);
 }
 .modal textarea{min-height:96px}
+
+
+/* Persistent office invitations */
+.office-invites{margin-bottom:14px}
+.invite-record-list{display:grid;gap:8px}
+.invite-record{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:12px 13px;border:1px solid var(--line);border-radius:12px;
+  background:linear-gradient(120deg,#fff,#f7fbf8);
+}
+.invite-record-main{display:grid;gap:3px;min-width:0}
+.invite-record-main b{font-size:10px;color:var(--ink)}
+.invite-record-main small{font-size:8px;color:var(--muted)}
+.invite-record-main code{
+  width:max-content;max-width:100%;direction:ltr;text-align:left;
+  font:700 8px var(--font-en);color:var(--forest-800);
+  background:#eef6f1;border:1px solid #dcebe1;border-radius:7px;padding:5px 7px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.invite-record-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+@media(max-width:680px){
+  .invite-record{align-items:flex-start;flex-direction:column}
+  .invite-record-actions{width:100%;justify-content:space-between}
+}
