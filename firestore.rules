@@ -97,11 +97,12 @@ service cloud.firestore {
               && me().role in ['client', 'engineer', 'pm']
               && request.resource.data.requesterUid == request.auth.uid
               && projectMember(request.resource.data.projectId))
-            || (collectionName == 'meetings'
+            || (collectionName in ['tasks', 'decisions', 'quantities', 'meetings']
               && managerOrProjectManager(officeId, request.resource.data.projectId))
             || (collectionName == 'team' && recordId == request.auth.uid
               && request.resource.data.uid == request.auth.uid)
-            || (collectionName == 'chat' && projectMember(request.resource.data.projectId)
+            || (collectionName == 'chat'
+              && (officeManager(officeId) || projectMember(request.resource.data.projectId))
               && request.resource.data.authorUid == request.auth.uid)
           );
         allow update: if inOffice(officeId)
