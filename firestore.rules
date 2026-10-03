@@ -90,6 +90,9 @@ service cloud.firestore {
             || (collectionName == 'files' && me().role in ['engineer', 'pm', 'client']
               && projectMember(request.resource.data.projectId)
               && request.resource.data.ownerUid == request.auth.uid)
+            || (collectionName == 'meetingRequests' && hasRole('client')
+              && request.resource.data.clientUid == request.auth.uid
+              && projectMember(request.resource.data.projectId))
             || (collectionName == 'clientRequests' && hasRole('client')
               && request.resource.data.clientUid == request.auth.uid
               && projectMember(request.resource.data.projectId))
@@ -117,6 +120,8 @@ service cloud.firestore {
               && resource.data.assigneeUid == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys()
                 .hasOnly(['status', 'progress', 'completionNote', 'updatedAt']))
+            || (collectionName == 'meetingRequests'
+              && managerOrProjectManager(officeId, resource.data.projectId))
             || (collectionName == 'clientRequests'
               && managerOrProjectManager(officeId, resource.data.projectId))
             || (collectionName == 'approvals'
