@@ -186,7 +186,9 @@ function reports(){
  if(isManager&&window.KHALIYA_PLATFORM?.getOfficeSettings){
    window.KHALIYA_PLATFORM.getOfficeSettings().then(office=>{
      const form=$('#officeSettingsForm');
-     if(!form||!office||form.dataset.khaliyaDirty==='1')return;
+     if(!form)return;
+     if(!office){const feedback=form.querySelector('[data-office-settings-feedback]');if(feedback)feedback.textContent='لم يتم العثور على سجل المكتب في Firestore.';return}
+     if(form.dataset.khaliyaDirty==='1')return;
      const set=(name,value)=>{const field=form.elements[name];if(field&&value!==undefined&&value!==null)field.value=String(value)};
      set('name',office.name||prefs.office||'');set('company',office.company||'');set('city',office.city||'');set('officeEmail',office.officeEmail||'');
      form.dataset.officeSettingsLoaded='1';form.inert=false;
