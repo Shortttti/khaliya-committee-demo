@@ -37,6 +37,8 @@ service cloud.firestore {
         || (collectionName == 'teams' && inOffice(officeId) && hasRole('pm') && visibleToMe())
         || (collectionName == 'consultantSlots' && inOffice(officeId)
           && (resource.data.requestedByUid == request.auth.uid || resource.data.consultantUid == request.auth.uid))
+        || (collectionName == 'joinRequests' && (officeManager(officeId) || resource.data.uid == request.auth.uid))
+        || (collectionName == 'notifications' && resource.data.recipientUid == request.auth.uid)
         || (collectionName == 'consultations' && inOffice(officeId)
           && resource.data.consultantUid == request.auth.uid)
         || (inOffice(officeId) && visibleToMe()
@@ -63,7 +65,9 @@ service cloud.firestore {
         && request.resource.data.role in ['manager', 'pm', 'engineer', 'client', 'consultant']
         && request.resource.data.userCode == 'KHL-' + uid;
       allow read: if (signedIn() && request.auth.uid == uid)
-        || (signedIn() && me().role == 'manager' && me().officeId == resource.data.officeId);
+        || (signedIn() && me().role == 'manager' && (me().officeId == resource.data.officeId
+          || (resource.data.officeId == ''
+            && get(/databases/$(database)/documents/offices/$(me().officeId)/joinRequests/$(uid)).data.status == 'pending')));
       allow update: if signedIn() && request.auth.uid == uid
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.email == resource.data.email
@@ -74,7 +78,7 @@ service cloud.firestore {
           || (request.resource.data.officeId is string
             && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)).data.ownerUid == uid)
           || (request.resource.data.inviteCode is string
-            && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.acceptedBy == uid
+            && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.get('acceptedBy', '') == uid
             && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.officeId == request.resource.data.officeId
             && inviteEmailMatches(getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.email)
             && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.role == request.resource.data.role)
@@ -82,10 +86,11 @@ service cloud.firestore {
         && (request.resource.data.projectIds == resource.data.get('projectIds', [])
           || managerCompletingOwnedOffice(uid)
           || (request.resource.data.inviteCode is string
-            && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.acceptedBy == uid));
+            && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.get('acceptedBy', '') == uid));
       allow update: if signedIn()
         && me().role == 'manager'
-        && me().officeId == resource.data.officeId
+        && (me().officeId == resource.data.officeId
+          || (request.resource.data.officeId is string && request.resource.data.officeId != '' && me().officeId == request.resource.data.officeId))
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.email == resource.data.email
         && request.resource.data.role == resource.data.role
@@ -93,6 +98,34 @@ service cloud.firestore {
         && request.resource.data.userCode == resource.data.userCode
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['projectIds', 'updatedAt']);
       allow delete: if false;
+      allow update: if signedIn()
+        && me().role == 'manager'
+        && (me().officeId == resource.data.officeId
+          || (resource.data.officeId == ''
+            && request.resource.data.officeId == me().officeId
+            && getAfter(/databases/$(database)/documents/offices/$(me().officeId)/joinRequests/$(uid)).data.status == 'accepted'))
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.userCode == resource.data.userCode
+        && (
+          (request.resource.data.officeId == resource.data.officeId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['projectIds', 'updatedAt']))
+          || (resource.data.officeId == ''
+            && request.resource.data.officeId == me().officeId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['officeId', 'officeName', 'projectIds', 'onboardingComplete', 'inviteCode', 'joinRequestStatus', 'updatedAt'])
+            && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)/joinRequests/$(uid)).data.status == 'accepted'
+            && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)/joinRequests/$(uid)).data.uid == uid
+            && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)/joinRequests/$(uid)).data.officeId == request.resource.data.officeId
+            && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)/joinRequests/$(uid)).data.role == resource.data.role)
+          || (resource.data.role != 'manager'
+            && request.resource.data.officeId == ''
+            && request.resource.data.officeName == ''
+            && request.resource.data.projectIds == []
+            && request.resource.data.onboardingComplete == false
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['officeId', 'officeName', 'projectIds', 'onboardingComplete', 'joinRequestStatus', 'updatedAt'])
+            && !existsAfter(/databases/$(database)/documents/offices/$(resource.data.officeId)/team/$(uid)))
+        );
     }
 
     match /offices/{officeId} {
@@ -168,6 +201,46 @@ service cloud.firestore {
               && (officeManager(officeId) || projectMember(request.resource.data.projectId))
               && request.resource.data.authorUid == request.auth.uid)
           );
+        allow create: if collectionName == 'joinRequests'
+          && signedIn() && recordId == request.auth.uid
+          && validJoinRequest(officeId, recordId);
+        allow update: if collectionName == 'joinRequests' && signedIn()
+          && recordId == request.auth.uid
+          && resource.data.uid == request.auth.uid
+          && resource.data.status in ['rejected', 'removed']
+          && request.resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'specialty', 'status', 'createdAt', 'reviewedByUid', 'reviewedAt', 'inviteCode', 'managerUids', 'officeName'])
+          && validJoinRequest(officeId, recordId);
+        allow update: if collectionName == 'joinRequests' && officeManager(officeId)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.officeId == officeId
+          && request.resource.data.inviteCode == resource.data.inviteCode
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedByUid', 'reviewedAt'])
+          && ((resource.data.status == 'pending' && request.resource.data.status in ['accepted', 'rejected'])
+            || (resource.data.status == 'accepted' && request.resource.data.status == 'removed'
+              && getAfter(userPath(resource.data.uid)).data.officeId == ''
+              && !existsAfter(/databases/$(database)/documents/offices/$(officeId)/team/$(resource.data.uid))));
+        allow create: if collectionName == 'notifications' && signedIn()
+          && request.resource.data.id == recordId
+          && request.resource.data.officeId == officeId
+          && request.resource.data.type == 'join-request'
+          && request.resource.data.createdByUid == request.auth.uid
+          && request.resource.data.joinRequestUid == request.auth.uid
+          && request.resource.data.visibleTo is list
+          && request.resource.data.visibleTo == getAfter(/databases/$(database)/documents/offices/$(officeId)/joinRequests/$(request.auth.uid)).data.managerUids
+          && getAfter(/databases/$(database)/documents/offices/$(officeId)/joinRequests/$(request.auth.uid)).data.status == 'pending'
+          && getAfter(/databases/$(database)/documents/offices/$(officeId)/joinRequests/$(request.auth.uid)).data.officeId == officeId;
+        allow create: if collectionName == 'notifications' && officeManager(officeId)
+          && request.resource.data.id == recordId
+          && request.resource.data.officeId == officeId
+          && request.resource.data.recipientUid is string
+          && request.resource.data.type in ['join-request-approved', 'join-request-rejected', 'member-removed']
+          && request.resource.data.visibleTo == [request.resource.data.recipientUid]
+          && (request.resource.data.type == 'member-removed'
+            ? getAfter(userPath(request.resource.data.recipientUid)).data.officeId == ''
+            : getAfter(/databases/$(database)/documents/offices/$(officeId)/joinRequests/$(request.resource.data.recipientUid)).data.status
+              == (request.resource.data.type == 'join-request-approved' ? 'accepted' : 'rejected'));
+        allow delete: if collectionName == 'joinRequests' && officeManager(officeId);
         allow update: if inOffice(officeId)
           && request.resource.data.officeId == officeId
           && resource.data.id == recordId
@@ -224,31 +297,60 @@ service cloud.firestore {
       }
     }
 
+    function validJoinRequest(officeId, uid) {
+      let requestData = request.resource.data;
+      let userData = get(userPath(uid)).data;
+      let inviteData = get(/databases/$(database)/documents/publicInvites/$(requestData.inviteCode)).data;
+      return signedIn()
+        && uid == request.auth.uid
+        && requestData.uid == uid
+        && requestData.userCode == userData.userCode
+        && requestData.email == request.auth.token.email
+        && requestData.role == userData.role
+        && requestData.role in ['pm', 'engineer', 'client', 'consultant']
+        && userData.officeId == ''
+        && userData.onboardingComplete == false
+        && requestData.officeId == officeId
+        && requestData.officeName == inviteData.officeName
+        && requestData.inviteCode.matches('^KHALIYA-INV-[A-F0-9]{8}$')
+        && inviteData.officeId == officeId
+        && inviteData.status == 'active'
+        && inviteData.scope == 'office'
+        && requestData.role in inviteData.allowedRoles
+        && requestData.status == 'pending'
+        && requestData.managerUids == inviteData.managerUids;
+    }
+
     match /publicInvites/{inviteCode} {
       allow create: if signedIn()
         && validInviteCode(inviteCode)
         && officeManager(request.resource.data.officeId)
-        && request.resource.data.keys().hasAll(['officeId', 'officeName', 'email', 'role', 'projectIds', 'createdByUid', 'status', 'createdAt'])
-        && request.resource.data.keys().hasOnly(['officeId', 'officeName', 'email', 'role', 'projectIds', 'createdByUid', 'status', 'createdAt'])
-        && request.resource.data.role in ['pm', 'engineer', 'client', 'consultant']
-        && request.resource.data.email is string
-        && request.resource.data.projectIds is list
+        && request.resource.data.keys().hasAll(['id', 'officeId', 'officeName', 'managerUids', 'allowedRoles', 'scope', 'createdByUid', 'status', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['id', 'officeId', 'officeName', 'managerUids', 'allowedRoles', 'scope', 'createdByUid', 'status', 'createdAt'])
+        && request.resource.data.id == inviteCode
+        && request.resource.data.scope == 'office'
+        && request.resource.data.managerUids is list
+        && request.auth.uid in request.resource.data.managerUids
+        && request.resource.data.allowedRoles is list
+        && request.resource.data.allowedRoles.toSet().hasOnly(['pm', 'engineer', 'client', 'consultant'])
+        && request.resource.data.allowedRoles.size() > 0
         && request.resource.data.createdByUid == request.auth.uid
-        && request.resource.data.status == 'pending';
-      allow read: if signedIn()
+        && request.resource.data.status == 'active'
+        && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)).data.activeInviteCode == inviteCode;
+      allow get: if signedIn()
         && (officeManager(resource.data.officeId)
-          || inviteEmailMatches(resource.data.email));
+          || (resource.data.status == 'active'
+            && resource.data.scope == 'office'
+            && resource.data.id == inviteCode));
+      allow list: if signedIn() && officeManager(resource.data.officeId);
       allow update: if signedIn()
-        && (officeManager(resource.data.officeId)
-          || (inviteEmailMatches(resource.data.email)
-            && resource.data.status == 'pending'
-            && request.resource.data.acceptedBy == request.auth.uid
-            && request.resource.data.status == 'accepted'
-            && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['acceptedBy', 'status', 'acceptedAt'])));
+        && officeManager(resource.data.officeId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'revokedAt', 'revokedByUid'])
+        && resource.data.status == 'active'
+        && request.resource.data.status == 'revoked'
+        && request.resource.data.revokedByUid == request.auth.uid;
       allow delete: if signedIn() && officeManager(resource.data.officeId);
     }
-
     match /{document=**} {
       allow read, write: if false;
     }

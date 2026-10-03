@@ -1,7 +1,7 @@
 import { auth, db } from './firebase.js';
-import { bindCloudStore, getState, updateState, makeId, flushPendingWrites } from './store.js?v=khaliya-11';
+import { bindCloudStore, getState, updateState, makeId, flushPendingWrites } from './store.js?v=khaliya-12';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, serverTimestamp, runTransaction } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const API_BASE='https://khaliyah-engineering-office.short-story-im.workers.dev';
 const MODULES=new Set([
@@ -441,17 +441,77 @@ async function reserveConsultantSlot({consultantUid,projectId,date,time,consulta
   });
   return slotId;
 }
-async function createInvite(email,role,projectIds=[]){
-  if(profile.role!=='manager')throw new Error('FORBIDDEN');
-  const normalized=String(email||'').trim().toLowerCase();
-  if(!normalized||!['pm','engineer','client','consultant'].includes(role))throw new Error('INVALID_INVITE');
+async function rotateOfficeInvite(){
+  if(profile.role!=='manager'||!profile.officeId)throw new Error('FORBIDDEN');
+  const officeRef=doc(db,'offices',profile.officeId);
   const code='KHALIYA-INV-'+crypto.randomUUID().replaceAll('-','').slice(0,8).toUpperCase();
-  await setDoc(doc(db,'publicInvites',code),{
-    officeId:profile.officeId,officeName:profile.officeName||'',
-    email:normalized,role,projectIds,createdByUid:user.uid,
-    status:'pending',createdAt:serverTimestamp()
+  const inviteRef=doc(db,'publicInvites',code);
+  await runTransaction(db,async tx=>{
+    const officeSnap=await tx.get(officeRef);
+    if(!officeSnap.exists()||officeSnap.data().ownerUid!==user.uid&&!officeSnap.data().managerUids?.includes(user.uid))throw new Error('FORBIDDEN');
+    const office=officeSnap.data(),oldCode=office.activeInviteCode;
+    if(oldCode&&oldCode!==code){
+      const oldRef=doc(db,'publicInvites',oldCode),oldSnap=await tx.get(oldRef);
+      if(oldSnap.exists()&&oldSnap.data().status==='active')tx.update(oldRef,{status:'revoked',revokedAt:serverTimestamp(),revokedByUid:user.uid});
+    }
+    tx.set(inviteRef,{
+      id:code,officeId:profile.officeId,officeName:office.name||profile.officeName||'',
+      managerUids:Array.isArray(office.managerUids)?office.managerUids:[user.uid],
+      allowedRoles:['pm','engineer','client','consultant'],scope:'office',
+      createdByUid:user.uid,status:'active',createdAt:serverTimestamp()
+    });
+    tx.update(officeRef,{activeInviteCode:code,updatedAt:serverTimestamp()});
   });
   return code;
+}
+async function approveJoinRequest(uid){
+  if(profile.role!=='manager'||!profile.officeId)throw new Error('FORBIDDEN');
+  const officeId=profile.officeId,requestRef=doc(db,'offices',officeId,'joinRequests',uid);
+  const userRef=doc(db,'users',uid),teamRef=doc(db,'offices',officeId,'team',uid);
+  const officeRef=doc(db,'offices',officeId),notificationRef=doc(db,'offices',officeId,'notifications',makeId('NTF'));
+  await runTransaction(db,async tx=>{
+    const [reqSnap,userSnap,officeSnap]=await Promise.all([tx.get(requestRef),tx.get(userRef),tx.get(officeRef)]);
+    if(!reqSnap.exists()||!userSnap.exists()||!officeSnap.exists())throw new Error('JOIN_REQUEST_NOT_FOUND');
+    const request=reqSnap.data(),target=userSnap.data(),office=officeSnap.data();
+    if(request.status!=='pending')throw new Error('JOIN_REQUEST_ALREADY_HANDLED');
+    if(target.officeId&&target.officeId!==officeId)throw new Error('USER_ALREADY_LINKED');
+    if(!Array.isArray(office.managerUids)||!office.managerUids.includes(user.uid)&&office.ownerUid!==user.uid)throw new Error('FORBIDDEN');
+    tx.update(requestRef,{status:'accepted',reviewedByUid:user.uid,reviewedAt:serverTimestamp()});
+    tx.update(userRef,{officeId,officeName:office.name||'',projectIds:[],onboardingComplete:true,inviteCode:request.inviteCode,joinRequestStatus:'accepted',updatedAt:serverTimestamp()});
+    tx.set(teamRef,{id:uid,uid,userCode:request.userCode,name:request.name,email:request.email,role:request.role,specialty:request.specialty||'',officeId,projectIds:[],visibleTo:[uid,user.uid],createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
+    if(request.role==='consultant')tx.set(doc(db,'offices',officeId,'consultants',uid),{id:uid,uid,name:request.name,specialty:request.specialty||'',available:true,officeId,visibleTo:[uid,user.uid],updatedAt:serverTimestamp()},{merge:true});
+    tx.set(notificationRef,{id:notificationRef.id,officeId,type:'join-request-approved',text:'تم قبول طلب انضمامك إلى '+(office.name||'المكتب'),recipientUid:uid,visibleTo:[uid],createdByUid:user.uid,createdAt:serverTimestamp(),readBy:[]});
+  });
+}
+async function rejectJoinRequest(uid){
+  if(profile.role!=='manager'||!profile.officeId)throw new Error('FORBIDDEN');
+  const officeId=profile.officeId,requestRef=doc(db,'offices',officeId,'joinRequests',uid);
+  const notificationRef=doc(db,'offices',officeId,'notifications',makeId('NTF'));
+  await runTransaction(db,async tx=>{
+    const officeSnap=await tx.get(doc(db,'offices',officeId)),reqSnap=await tx.get(requestRef);
+    if(!officeSnap.exists()||!reqSnap.exists())throw new Error('JOIN_REQUEST_NOT_FOUND');
+    const office=officeSnap.data(),request=reqSnap.data();
+    if(office.ownerUid!==user.uid&&!office.managerUids?.includes(user.uid))throw new Error('FORBIDDEN');
+    if(request.status!=='pending')throw new Error('JOIN_REQUEST_ALREADY_HANDLED');
+    tx.update(requestRef,{status:'rejected',reviewedByUid:user.uid,reviewedAt:serverTimestamp()});
+    tx.set(notificationRef,{id:notificationRef.id,officeId,type:'join-request-rejected',text:'لم تتم الموافقة على طلب انضمامك إلى '+(office.name||'المكتب'),recipientUid:uid,visibleTo:[uid],createdByUid:user.uid,createdAt:serverTimestamp(),readBy:[]});
+  });
+}
+async function removeOfficeMember(uid){
+  if(profile.role!=='manager'||!profile.officeId||uid===user.uid)throw new Error('FORBIDDEN');
+  const officeId=profile.officeId,userRef=doc(db,'users',uid),teamRef=doc(db,'offices',officeId,'team',uid),joinRef=doc(db,'offices',officeId,'joinRequests',uid),notificationRef=doc(db,'offices',officeId,'notifications',makeId('NTF'));
+  await runTransaction(db,async tx=>{
+    const [officeSnap,targetSnap,teamSnap,joinSnap]=await Promise.all([tx.get(doc(db,'offices',officeId)),tx.get(userRef),tx.get(teamRef),tx.get(joinRef)]);
+    if(!officeSnap.exists()||!targetSnap.exists()||!teamSnap.exists())throw new Error('MEMBER_NOT_FOUND');
+    const office=officeSnap.data(),target=targetSnap.data();
+    if(office.ownerUid!==user.uid&&!office.managerUids?.includes(user.uid))throw new Error('FORBIDDEN');
+    if(target.role==='manager'||target.officeId!==officeId)throw new Error('MEMBER_CANNOT_BE_REMOVED');
+    tx.delete(teamRef);
+    if(joinSnap.exists()&&joinSnap.data().status==='accepted')tx.update(joinRef,{status:'removed',reviewedByUid:user.uid,reviewedAt:serverTimestamp()});
+    if(target.role==='consultant')tx.delete(doc(db,'offices',officeId,'consultants',uid));
+    tx.update(userRef,{officeId:'',officeName:'',projectIds:[],onboardingComplete:false,joinRequestStatus:'removed',updatedAt:serverTimestamp()});
+    tx.set(notificationRef,{id:notificationRef.id,officeId,type:'member-removed',text:'تمت إزالة حسابك من '+(office.name||'المكتب'),recipientUid:uid,visibleTo:[uid],createdByUid:user.uid,createdAt:serverTimestamp(),readBy:[]});
+  });
 }
 async function addProjectMembership(uid,projectId){
   if(profile.role!=='manager')throw new Error('FORBIDDEN');
@@ -473,7 +533,10 @@ window.KHALIYA_PLATFORM=Object.freeze({
   indexText,
   lookupUserByCode,
   addProjectMembership,
-  createInvite,
+  rotateOfficeInvite,
+  approveJoinRequest,
+  rejectJoinRequest,
+  removeOfficeMember,
   reserveConsultantSlot,
   getOfficeSettings,
   updateOfficeSettings,

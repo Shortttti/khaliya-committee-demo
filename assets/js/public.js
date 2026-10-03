@@ -1,7 +1,7 @@
 import './interactions.js?v=khaliya-11';
 import { auth, db } from './firebase.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { doc, getDoc, setDoc, updateDoc, writeBatch, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { doc, getDoc, setDoc, updateDoc, writeBatch, serverTimestamp, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const $=(selector,root=document)=>root.querySelector(selector);
 const params=new URLSearchParams(location.search);
@@ -25,6 +25,7 @@ document.querySelector('[data-nav-toggle]')?.addEventListener('click',()=>docume
 document.querySelectorAll('.site-nav a[href^="#"]').forEach(link=>link.addEventListener('click',()=>document.body.classList.remove('nav-open')));
 
 const onboarding=$('[data-onboarding]');
+let stopJoinRequestWatch=null;
 if(onboarding){
   let role=sessionStorage.getItem('khaliya-onboarding-role')||params.get('role')||'manager';
   if(!roles[role])role='manager';
@@ -43,7 +44,7 @@ if(onboarding){
   };
   $('[data-role-label]').textContent=roleInfo.label;
   $('[data-onboard-title]').textContent=isManager?'لنجهّز مساحة مكتبك.':isClient?'اربط حسابك بمشروعك.':'اربط حسابك بمكتبك.';
-  $('[data-onboard-desc]').textContent=isManager?'أنشئ مساحة المكتب ثم شارك رمز الدعوة مع أعضاء الفريق.':'أدخل رمز الدعوة الذي أرسله لك المكتب أو مدير المشروع.';
+  $('[data-onboard-desc]').textContent=isManager?'أنشئ مساحة المكتب ثم شارك رمز الدعوة مع أعضاء الفريق.':'أدخل رمز المكتب لإرسال طلب انضمام؛ ينتظر تفعيل الحساب موافقة المكتب.';
   setFieldGroup('[data-office-field]',isManager);
   setFieldGroup('[data-invite-field]',!isManager&&!isClient);
   setFieldGroup('[data-manager-invite]',isManager);
@@ -118,62 +119,67 @@ if(onboarding){
         await updateDoc(userRef,{officeId,officeName,projectIds:[],onboardingComplete:true,updatedAt:serverTimestamp()});
         await setDoc(doc(db,'offices',officeId,'team',current.uid),{id:current.uid,uid:current.uid,userCode:profile.userCode,name:profile.name,email:profile.email,role:profile.role,specialty:profile.specialty||'',officeId,projectIds:[],visibleTo:[current.uid],createdAt:serverTimestamp()});
         sessionStorage.setItem('khaliya-onboarding-office',officeName);
-        const inviteEmail=$('[name="teammate"]')?.value.trim().toLowerCase();
-        if(inviteEmail){
-          const inviteRole=$('[name="inviteRole"]')?.value||'engineer';
-          const inviteCode='KHALIYA-INV-'+crypto.randomUUID().replaceAll('-','').slice(0,8).toUpperCase();
-          await setDoc(doc(db,'publicInvites',inviteCode),{
-            officeId,officeName,email:inviteEmail,role:inviteRole,projectIds:[],
-            createdByUid:current.uid,status:'pending',createdAt:serverTimestamp()
-          });
-          if(feedback)feedback.textContent='تم إنشاء الدعوة وحفظها داخل مساحة المكتب: '+inviteCode;
-        }
+        const inviteCode='KHALIYA-INV-'+crypto.randomUUID().replaceAll('-','').slice(0,8).toUpperCase();
+        const inviteBatch=writeBatch(db);
+        inviteBatch.set(doc(db,'publicInvites',inviteCode),{
+          id:inviteCode,officeId,officeName,managerUids:[current.uid],
+          allowedRoles:['pm','engineer','client','consultant'],scope:'office',
+          createdByUid:current.uid,status:'active',createdAt:serverTimestamp()
+        });
+        inviteBatch.update(doc(db,'offices',officeId),{activeInviteCode:inviteCode,updatedAt:serverTimestamp()});
+        await inviteBatch.commit();
+        if(feedback)feedback.textContent='تم إنشاء رمز دعوة المكتب: '+inviteCode+' — يمكن استخدامه لإرسال طلبات انضمام متعددة.';
       }else{
         const inviteCode=String($('[name="invite"]')?.value||$('[name="clientInvite"]')?.value||'').trim().toUpperCase();
         if(!inviteCode)throw new Error('INVITE_REQUIRED');
         const inviteRef=doc(db,'publicInvites',inviteCode);
-        const inviteQuery=await getDoc(inviteRef);
-        if(!inviteQuery.exists())throw new Error('INVITE_NOT_FOUND');
-        const invite=inviteQuery.data(),officeId=invite.officeId;
-        if(invite.email?.toLowerCase()!==current.email?.toLowerCase())throw new Error('INVITE_EMAIL_MISMATCH');
-        if(invite.role!==role)throw new Error('INVITE_ROLE_MISMATCH');
-        const alreadyAccepted=invite.status==='accepted'&&invite.acceptedBy===current.uid;
-        if(invite.status!=='pending'&&!alreadyAccepted)throw new Error('INVITE_INVALID');
-
-        const userUpdate={
-          officeId,
-          officeName:invite.officeName||'',
-          projectIds:Array.isArray(invite.projectIds)?invite.projectIds:[],
-          onboardingComplete:true,
-          inviteCode,
-          updatedAt:serverTimestamp()
-        };
-
-        if(invite.status==='pending'){
-          const batch=writeBatch(db);
-          batch.update(inviteRef,{acceptedBy:current.uid,status:'accepted',acceptedAt:serverTimestamp()});
-          batch.update(userRef,userUpdate);
-          await batch.commit();
-        }else{
-          await updateDoc(userRef,userUpdate);
+        const inviteSnap=await getDoc(inviteRef);
+        if(!inviteSnap.exists())throw new Error('INVITE_NOT_FOUND');
+        const invite=inviteSnap.data(),officeId=invite.officeId;
+        if(invite.status!=='active'||invite.scope!=='office')throw new Error('INVITE_INVALID');
+        if(!Array.isArray(invite.allowedRoles)||!invite.allowedRoles.includes(role))throw new Error('INVITE_ROLE_MISMATCH');
+        if(profile.officeId)throw new Error('ALREADY_LINKED');
+        const requestRef=doc(db,'offices',officeId,'joinRequests',current.uid);
+        const existingRequest=await getDoc(requestRef);
+        if(existingRequest.exists()&&existingRequest.data().status==='pending'){
+          if(feedback)feedback.textContent='طلبك بانتظار موافقة المكتب. معرّف حسابك: '+(profile.userCode||'KHL-'+current.uid)+'.';
+          if(submit){submit.disabled=true;submit.textContent='بانتظار موافقة المكتب';}
+          clearTimeout(saveGuard);
+          return;
         }
-
-        const memberRecord={
-          id:current.uid,uid:current.uid,userCode:profile.userCode,
-          name:profile.name,email:profile.email,role:profile.role,
-          specialty:profile.specialty||'',officeId,
-          projectIds:Array.isArray(invite.projectIds)?invite.projectIds:[],
-          visibleTo:[current.uid],createdAt:serverTimestamp(),updatedAt:serverTimestamp()
+        const retryingRequest=existingRequest.exists()&&['rejected','removed'].includes(existingRequest.data().status);
+        if(existingRequest.exists()&&!retryingRequest)throw new Error('REQUEST_ALREADY_EXISTS');
+        const managerUids=Array.isArray(invite.managerUids)?invite.managerUids:[];
+        if(!managerUids.length)throw new Error('INVITE_INVALID');
+        const requestData={
+          id:current.uid,uid:current.uid,userCode:profile.userCode||'KHL-'+current.uid,
+          name:profile.name||current.displayName||'',email:current.email||profile.email||'',
+          role,specialty:profile.specialty||'',officeId,officeName:invite.officeName||'',
+          inviteCode,managerUids,status:'pending',createdAt:serverTimestamp()
         };
-        try{
-          await setDoc(doc(db,'offices',officeId,'team',current.uid),memberRecord,{merge:true});
-          if(role==='consultant')await setDoc(doc(db,'offices',officeId,'consultants',current.uid),{
-            id:current.uid,uid:current.uid,name:profile.name,specialty:profile.specialty||'',
-            available:true,officeId,visibleTo:[current.uid],updatedAt:serverTimestamp()
-          },{merge:true});
-        }catch(memberError){
-          console.warn('KHALIYA membership record repair deferred',memberError);
-        }
+        const notificationId='NTF-'+crypto.randomUUID().replaceAll('-','').slice(0,12).toUpperCase();
+        const batch=writeBatch(db);
+        if(existingRequest.exists())batch.update(requestRef,{...requestData,createdAt:serverTimestamp(),reviewedByUid:null,reviewedAt:null});
+        else batch.set(requestRef,requestData);
+        batch.set(doc(db,'offices',officeId,'notifications',notificationId),{
+          id:notificationId,officeId,type:'join-request',title:'طلب انضمام جديد',
+          text:(requestData.name||requestData.userCode)+' ('+requestData.userCode+') طلب الانضمام إلى المكتب.',
+          joinRequestUid:current.uid,createdByUid:current.uid,visibleTo:managerUids,
+          createdAt:serverTimestamp(),readBy:[]
+        });
+        await batch.commit();
+        if(feedback)feedback.textContent=(retryingRequest?'أُعيد إرسال طلبك بعد تحديث حالته السابقة. ':'تم إرسال طلبك إلى المكتب. ')+( 'سيظهر لك إشعار عند قبول الدعوة. معرّف حسابك: '+requestData.userCode+'.');
+        stopJoinRequestWatch?.();
+        stopJoinRequestWatch=onSnapshot(requestRef,snapshot=>{
+          if(!snapshot.exists())return;
+          const status=snapshot.data().status;
+          if(status==='accepted')location.replace(role==='client'?'client.html':role==='consultant'?'consultations.html':'home.html');
+          else if(status==='rejected'&&feedback){feedback.textContent='لم يوافق المكتب على الطلب. يمكنك إعادة تقديمه بالرمز الحالي.';if(submit){submit.disabled=false;submit.textContent='إعادة إرسال طلب الانضمام';}}
+          else if(status==='removed'&&feedback){feedback.textContent='تمت إزالة الحساب من المكتب. استخدم رمز المكتب الحالي لإرسال طلب جديد.';if(submit){submit.disabled=false;submit.textContent='طلب انضمام جديد';}}
+        });
+        if(submit){submit.disabled=true;submit.textContent='طلبك بانتظار الموافقة';}
+        clearTimeout(saveGuard);
+        return;
       }
       location.replace(role==='client'?'client.html':role==='consultant'?'consultations.html':'home.html');
     }catch(error){
@@ -182,9 +188,11 @@ if(onboarding){
         OFFICE_REQUIRED:'اكتب اسم المكتب قبل المتابعة.',
         INVITE_REQUIRED:'رمز الدعوة مطلوب للانضمام.',
         INVITE_NOT_FOUND:'رمز الدعوة غير موجود أو انتهت صلاحيته.',
-        INVITE_EMAIL_MISMATCH:'هذا الرمز مرتبط ببريد إلكتروني مختلف.',
+        INVITE_EMAIL_MISMATCH:'هذا الرمز غير صالح لهذا الحساب.',
         INVITE_ROLE_MISMATCH:'رمز الدعوة مخصص لنوع حساب مختلف.',
-        INVITE_INVALID:'الرمز لا يطابق نوع حسابك أو استُخدم مسبقًا.',
+        INVITE_INVALID:'رمز الدعوة غير نشط أو انتهت صلاحيته. اطلب الرمز الحالي من المكتب.',
+        REQUEST_ALREADY_EXISTS:'يوجد طلب سابق لهذا الحساب. تواصل مع المكتب لمراجعته.',
+        ALREADY_LINKED:'هذا الحساب مرتبط بمكتب بالفعل.',
         ROLE_MISMATCH:'نوع الحساب لا يطابق ملف التسجيل.',
         PROFILE_MISSING:'لم يُعثر على ملف الحساب في قاعدة البيانات.'
       };
