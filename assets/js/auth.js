@@ -121,6 +121,7 @@ document.querySelector('[data-auth="signup"]')?.addEventListener('submit',async 
       role,
       officeId:null,
       officeName:'',
+      projectIds:[],
       onboardingComplete:false,
       createdAt:serverTimestamp(),
       updatedAt:serverTimestamp()
