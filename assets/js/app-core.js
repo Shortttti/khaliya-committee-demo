@@ -1,4 +1,4 @@
-import './shell.js?v=khaliya-12';
+import './shell.js?v=khaliya-13';
 import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses,flushPendingWrites} from './store.js?v=khaliya-11';
 import englishExtra from './english-extra.js?v=khaliya-09';
 import './interactions.js?v=khaliya-09';
@@ -246,8 +246,8 @@ function modulePage(){
 function notificationItems(){
  const s=getState(),user=s.user||{},role=user.role||'',uid=user.uid;
  const items=(s.notifications||[]).filter(n=>n.recipientUid===uid||(n.visibleTo||[]).includes(uid)).map(n=>({...n,seen:(n.readBy||[]).includes(uid)||!!n.seen,href:n.type==='اعتماد'?'approvals.html':n.type==='مهمة'?'tasks.html':n.type==='اجتماع'?'meetings.html':n.type==='طلب عميل'?'client-requests.html':n.type==='استشارة'?'consultations.html':'thread.html'}));
- if(role==='client')items.push(...s.approvals.filter(a=>a.clientUid===uid&&a.status==='بانتظار العميل').map(a=>({id:'APR-'+a.id,text:'مراجعة مطلوبة: '+a.title,type:'اعتماد',href:'approvals.html',seen:s.notifications.some(n=>n.id==='APR-'+a.id&&(n.readBy||[]).includes(uid))})));
- if(role==='manager'||role==='pm')items.push(...(s.clientRequests||[]).filter(r=>r.status==='جديد').map(r=>({id:'REQ-'+r.id,text:'طلب عميل جديد: '+r.title,type:'طلب عميل',href:'client-requests.html',seen:(r.readBy||[]).includes(uid)})));
+ if(role==='client')items.push(...s.approvals.filter(a=>a.clientUid===uid&&a.status==='بانتظار العميل').map(a=>({id:'APR-'+a.id,text:'مراجعة مطلوبة: '+a.title,type:'اعتماد',href:'approvals.html',createdAt:a.createdAt||a.sent,seen:s.notifications.some(n=>n.id==='APR-'+a.id&&(n.readBy||[]).includes(uid))})));
+ if(role==='manager'||role==='pm')items.push(...(s.clientRequests||[]).filter(r=>r.status==='جديد').map(r=>({id:'REQ-'+r.id,text:'طلب عميل جديد: '+r.title,type:'طلب عميل',href:'client-requests.html',createdAt:r.createdAt||r.date,seen:(r.readBy||[]).includes(uid)})));
  return [...new Map(items.map(n=>[n.id,n])).values()];
 }
 function notificationTime(value){const date=value?.toDate?value.toDate():new Date(value||'');if(Number.isNaN(date.getTime()))return '';return new Intl.DateTimeFormat(getState().settings.language==='en'?'en-US':'ar-SA',{dateStyle:'medium',timeStyle:'short'}).format(date)}
