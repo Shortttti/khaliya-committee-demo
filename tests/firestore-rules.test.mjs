@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { after, before, test } from 'node:test';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc, query, where, writeBatch } from 'firebase/firestore';
 
 const projectId = 'demo-khaliya-rules';
 let testEnv;
@@ -73,25 +73,23 @@ async function submitRequest({ uid, email, role = 'engineer', officeId, code }) 
 }
 async function approveRequest({ uid, email, role = 'engineer', officeId, code }) {
   const managerDb = testEnv.authenticatedContext('office-manager', { email: 'manager@example.com' }).firestore();
-  const batch = writeBatch(managerDb);
-  batch.update(doc(managerDb, 'offices', officeId, 'joinRequests', uid), {
+  await assertSucceeds(updateDoc(doc(managerDb, 'offices', officeId, 'joinRequests', uid), {
     status: 'accepted', reviewedByUid: 'office-manager', reviewedAt: serverTimestamp()
-  });
-  batch.update(doc(managerDb, 'users', uid), {
+  }));
+  await assertSucceeds(updateDoc(doc(managerDb, 'users', uid), {
     officeId, officeName: 'مكتب خلية التجريبي', projectIds: [], onboardingComplete: true,
     inviteCode: code, joinRequestStatus: 'accepted', updatedAt: serverTimestamp()
-  });
-  batch.set(doc(managerDb, 'offices', officeId, 'team', uid), {
+  }));
+  await assertSucceeds(setDoc(doc(managerDb, 'offices', officeId, 'team', uid), {
     id: uid, uid, userCode: 'KHL-' + uid, name: 'عضو ' + uid, email, role,
     specialty: '', officeId, projectIds: [], visibleTo: [uid, 'office-manager'],
     createdAt: serverTimestamp(), updatedAt: serverTimestamp()
-  });
-  batch.set(doc(managerDb, 'offices', officeId, 'notifications', 'accepted-' + uid), {
+  }));
+  await assertSucceeds(setDoc(doc(managerDb, 'offices', officeId, 'notifications', 'accepted-' + uid), {
     id: 'accepted-' + uid, officeId, type: 'join-request-approved', text: 'تم قبول طلب الانضمام',
     recipientUid: uid, visibleTo: [uid], createdByUid: 'office-manager',
     createdAt: serverTimestamp(), readBy: []
-  });
-  await assertSucceeds(batch.commit());
+  }));
 }
 async function updateProfileMembership(db, uid, officeId) {
   const batch = writeBatch(db);
