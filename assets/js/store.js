@@ -3,11 +3,11 @@ import {
   collection, doc, deleteDoc, onSnapshot, query, setDoc, where, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
-const COLLECTIONS=['projects','tasks','changes','files','approvals','team','activity','notifications','clientRequests','consultations','decisions','meetings','schedule','timeline','quantities','chat','meetingRequests','consultants','consultantSlots','teams','visualProposals'];
+const COLLECTIONS=['projects','tasks','changes','files','approvals','team','activity','notifications','clientRequests','consultations','decisions','meetings','schedule','timeline','quantities','chat','meetingRequests','consultants','consultantSlots','teams','visualProposals','invites'];
 const defaults=()=>({
   user:null,role:'engineer',language:'ar',projects:[],tasks:[],changes:[],files:[],
   approvals:[],team:[],activity:[],notifications:[],clientRequests:[],consultations:[],
-  decisions:[],meetings:[],schedule:[],timeline:[],quantities:[],chat:[],meetingRequests:[],consultants:[],consultantSlots:[],teams:[],visualProposals:[],
+  decisions:[],meetings:[],schedule:[],timeline:[],quantities:[],chat:[],meetingRequests:[],consultants:[],consultantSlots:[],teams:[],visualProposals:[],invites:[],
   settings:{office:'',project:'',currency:'SAR',theme:'light',language:'ar',fontSize:'normal'}
 });
 let state=defaults(), profile=null, stop=[], writeQueue=Promise.resolve();
@@ -28,7 +28,7 @@ function normalize(row,id){
   return value;
 }
 function canSync(){return !!(profile?.uid&&profile?.officeId)}
-function collectionPath(name){return collection(db,'offices',profile.officeId,name)}
+function collectionPath(name){return name==='invites'?collection(db,'publicInvites'):collection(db,'offices',profile.officeId,name)}
 function wire(row,id,name){
   const value={...row,id,officeId:profile.officeId,updatedAt:serverTimestamp()};
   if(value.project&&!value.projectId)value.projectId=value.project;
@@ -39,6 +39,7 @@ function wire(row,id,name){
 }
 function roleQuery(name){
   const ref=collectionPath(name);
+  if(name==='invites')return query(ref,where('officeId','==',profile.officeId));
   if(profile.role==='manager'||name==='consultants'||(profile.role==='pm'&&name==='team'))return query(ref,where('officeId','==',profile.officeId));
   if(profile.role==='pm'&&name==='teams')return query(ref,where('visibleTo','array-contains',profile.uid));
   if(profile.role==='consultant'&&name==='consultations')return query(ref,where('consultantUid','==',profile.uid));
@@ -57,6 +58,7 @@ async function syncChanges(before,after){
   if(!canSync())throw new Error('يجب ربط الحساب بمكتب قبل حفظ بيانات المشروع.');
   const writes=[];
   for(const name of COLLECTIONS){
+    if(name==='invites')continue;
     const prev=Array.isArray(before[name])?before[name]:[];
     const next=Array.isArray(after[name])?after[name]:[];
     const oldMap=new Map(prev.map((row,index)=>[idOf(row,index),row]));
@@ -73,6 +75,7 @@ function watchWorkspace(){
   stop.forEach(unsub=>unsub());stop=[];
   if(!canSync())return;
   for(const name of COLLECTIONS){
+    if(name==='invites'&&profile.role!=='manager'){state.invites=[];continue}
     try{
       stop.push(onSnapshot(roleQuery(name),snapshot=>{
         state[name]=snapshot.docs.map(item=>normalize(item.data(),item.id));
