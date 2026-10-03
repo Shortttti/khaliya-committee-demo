@@ -93,8 +93,9 @@ function files(){
  const actions=clientView?'':button('upload','رفع ملف','btn btn-primary','plus');
  content.innerHTML=renderHeading(clientView?'بوابة العميل':'ملفات المشروع',clientView?'المستندات المشتركة':'الملفات والإصدارات',clientView?'الملفات التي تمت مشاركتها مع مشروعك.':'ملفات المشروع المحفوظة وتحليلاتها.',actions)+
  '<div class="filter-bar"><input class="search-input" id="fileFilter" placeholder="ابحث بالاسم أو الرقم"><select class="select" id="fileDiscipline"><option value="">كل التخصصات</option>'+[...new Set(rows.map(file=>file.discipline).filter(Boolean))].map(item=>'<option>'+esc(item)+'</option>').join('')+'</select><span class="count-note">'+rows.length+' ملف</span></div><section class="panel panel-pad"><div class="simple-list file-list">'+rows.map(file=>'<div class="file-entry"><a href="#file-'+esc(file.id)+'" data-action="file-detail" data-id="'+esc(file.id)+'"><span class="file-type">'+esc(file.type||'FILE')+'</span><span class="file-title"><b>'+esc(file.name)+'</b><small>'+esc(file.code||'')+' · '+esc(file.discipline||'')+' · '+esc(file.owner||'')+'</small></span><span class="version">v'+esc(file.version||1)+'</span>'+status(file.state||'مرفوع')+'</a><div class="file-entry-actions">'+(file.storageKey?'<button type="button" class="btn btn-sm" data-action="download-file" data-id="'+esc(file.id)+'">تنزيل</button>':'')+(file.storageKey?'<button type="button" class="btn btn-sm btn-soft" data-action="file-status" data-id="'+esc(file.id)+'">تحديث التحليل</button>':'')+'</div></div>').join('')||'<div class="empty-state">لا توجد ملفات محفوظة لهذا الحساب.</div>'+'</div></section>';
- $('#fileFilter')?.addEventListener('input',event=>$$('.file-list>a').forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(event.target.value.toLowerCase())));
- $('#fileDiscipline')?.addEventListener('change',event=>$$('.file-list>a').forEach(row=>row.hidden=!!event.target.value&&!row.textContent.includes(event.target.value)));
+ const filterFileEntries=()=>{const query=($('#fileFilter')?.value||'').trim().toLowerCase(),discipline=$('#fileDiscipline')?.value||'';$('.file-entry').forEach(row=>{row.hidden=!(row.textContent.toLowerCase().includes(query)&&(!discipline||row.textContent.includes(discipline)))})};
+ $('#fileFilter')?.addEventListener('input',filterFileEntries);
+ $('#fileDiscipline')?.addEventListener('change',filterFileEntries);
 }function approvals(){
  const s=getState(),role=s.user?.role||'engineer',clientView=role==='client',rows=clientView?s.approvals.filter(item=>item.clientUid===s.user?.uid):s.approvals;
  const canCreate=['manager','pm'].includes(role);
@@ -378,10 +379,9 @@ document.addEventListener('submit',async e=>{if(e.target.id==='consultationReque
 $('#globalSearch')?.addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase(),box=$('#searchResults');if(!q){box.innerHTML='';box.classList.remove('open');return}const s=getState(),matches=[...s.projects.map(p=>({label:p.name,detail:p.code,url:`workspace.html?project=${p.id}`})),...s.files.map(f=>({label:f.name,detail:f.code,url:'files.html'})),...s.changes.map(c=>({label:c.title,detail:c.id,url:'changes.html'}))].filter(x=>(x.label+' '+x.detail).toLowerCase().includes(q)).slice(0,6);box.innerHTML=matches.map(x=>`<a href="${x.url}"><strong>${esc(x.label)}</strong><small>${esc(x.detail)}</small></a>`).join('')||'<div class="empty-state">لا توجد نتائج مطابقة</div>';box.classList.add('open');localizeUi()});
 const filterProjects=()=>$$('.project-list>a').forEach(r=>r.hidden=!(r.textContent.toLowerCase().includes(($('#projectFilter')?.value||'').toLowerCase())&&(!$('#projectStatus')?.value||r.textContent.includes($('#projectStatus').value))));$('#projectFilter')?.addEventListener('input',filterProjects);
 $('#projectStatus')?.addEventListener('change',filterProjects);
-$('#taskFilter')?.addEventListener('input',e=>$$('.task-card').forEach(r=>r.hidden=!r.textContent.toLowerCase().includes(e.target.value.toLowerCase())));
+$('#taskFilter')?.addEventListener('input',e=>{const query=e.target.value.trim().toLowerCase();$('.task-table tbody tr').forEach(row=>row.hidden=query!==''&&!row.textContent.toLowerCase().includes(query))});
 $('#taskProject')?.addEventListener('change',e=>location.href=e.target.value?`tasks.html?project=${e.target.value}`:'tasks.html');
-$('#fileFilter')?.addEventListener('input',e=>$$('.file-list>a').forEach(r=>r.hidden=!r.textContent.toLowerCase().includes(e.target.value.toLowerCase())));
-$('#fileDiscipline')?.addEventListener('change',e=>$$('.file-list>a').forEach(r=>r.hidden=!!e.target.value&&!r.textContent.includes(e.target.value)));
+
 document.addEventListener('click',e=>{if(e.target.id==='modalBackdrop')e.target.classList.remove('open')});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('#modalBackdrop')?.classList.remove('open');document.body.classList.remove('menu-open')}});
 
