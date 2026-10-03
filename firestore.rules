@@ -116,8 +116,8 @@ service cloud.firestore {
               && projectMember(request.resource.data.projectId)
               && request.resource.data.ownerUid == request.auth.uid)
             || (collectionName == 'consultantSlots'
-              && me().role in ['client', 'engineer', 'pm']
-              && projectMember(request.resource.data.projectId)
+              && me().role in ['manager', 'client', 'engineer', 'pm']
+              && (projectMember(request.resource.data.projectId) || officeManager(officeId))
               && request.resource.data.requestedByUid == request.auth.uid
               && get(/databases/$(database)/documents/offices/$(officeId)/consultants/$(request.resource.data.consultantUid)).data.available == true
               && !exists(/databases/$(database)/documents/offices/$(officeId)/consultantSlots/$(recordId)))
