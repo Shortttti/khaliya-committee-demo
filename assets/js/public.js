@@ -88,6 +88,10 @@ if(onboarding){
       const userSnap=await getDoc(userRef);
       if(!userSnap.exists())throw new Error('PROFILE_MISSING');
       const profile=userSnap.data();
+      if(profile.onboardingComplete===true&&profile.officeId){
+        location.replace(profile.role==='client'?'client.html':profile.role==='consultant'?'consultations.html':'home.html');
+        return;
+      }
       if(profile.role!==role)throw new Error('ROLE_MISMATCH');
       if(isManager){
         const officeName=$('[name="office"]')?.value.trim();
