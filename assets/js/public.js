@@ -171,6 +171,7 @@ if(onboarding){
         INVITE_REQUIRED:'رمز الدعوة مطلوب للانضمام.',
         INVITE_NOT_FOUND:'رمز الدعوة غير موجود أو انتهت صلاحيته.',
         INVITE_EMAIL_MISMATCH:'هذا الرمز مرتبط ببريد إلكتروني مختلف.',
+        INVITE_ROLE_MISMATCH:'رمز الدعوة مخصص لنوع حساب مختلف.',
         INVITE_INVALID:'الرمز لا يطابق نوع حسابك أو استُخدم مسبقًا.',
         ROLE_MISMATCH:'نوع الحساب لا يطابق ملف التسجيل.',
         PROFILE_MISSING:'لم يُعثر على ملف الحساب في قاعدة البيانات.'
