@@ -7,7 +7,10 @@ function showBootError(code){
   if(sidebar&&!sidebar.innerHTML)sidebar.innerHTML='<div style="padding:22px">'+brand+'</div>';
   if(topbar&&!topbar.innerHTML)topbar.innerHTML='<div style="padding:20px;color:#17382d">مساحة العمل · خلية | KHALIYA</div>';
 }
-setTimeout(()=>{if(!window.KHALIYA_APP_STARTED)showBootError('APP-MODULE-TIMEOUT')},12000);
-import('./app-core.js?v=khaliya-10')
-  .then(()=>import('./platform.js?v=khaliya-10'))
-  .catch(error=>{console.error('KHALIYA app startup failed',error);showBootError('APP-MODULE-LOAD')});
+setTimeout(()=>{if(!window.KHALIYA_APP_STARTED)showBootError('APP-MODULE-TIMEOUT')},8000);
+Promise.all([
+  import('./app-core.js?v=khaliya-10'),
+  import('./platform.js?v=khaliya-10')
+]).then(()=>{
+  window.dispatchEvent(new Event('khaliya:platform-ready'));
+}).catch(error=>{console.error('KHALIYA app startup failed',error);showBootError('APP-MODULE-LOAD')});
