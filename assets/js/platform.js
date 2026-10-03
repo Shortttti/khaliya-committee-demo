@@ -1,4 +1,5 @@
 import { auth, db } from './firebase.js';
+import { bindCloudStore, getState, updateState, makeId } from './store.js?v=cloud-01';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
@@ -15,12 +16,7 @@ const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,ch=>({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[ch]));
 
-function readWorkspace(){
-  try{return JSON.parse(localStorage.getItem('nawa.workspace.v2')||'{}')}catch{return {}}
-}
-function writeWorkspace(state){
-  localStorage.setItem('nawa.workspace.v2',JSON.stringify(state));
-}
+function readWorkspace(){ return getState(); }
 function toast(message){
   let region=document.querySelector('.toast-region');
   if(!region){
@@ -48,36 +44,17 @@ if(!user){
   await new Promise(()=>{});
 }
 
-let profile={
-  uid:user.uid,
-  email:user.email||'',
-  role:'engineer',
-  officeId:null,
-  projectIds:[]
-};
-
+let profile={uid:user.uid,email:user.email||'',role:'',officeId:null,projectIds:[]};
 try{
   const snap=await getDoc(doc(db,'users',user.uid));
-  if(snap.exists())profile={...profile,...snap.data()};
+  if(!snap.exists())throw new Error('PROFILE_NOT_FOUND');
+  profile={...profile,...snap.data()};
+  if(!['manager','pm','engineer','client','consultant'].includes(profile.role))throw new Error('INVALID_PROFILE_ROLE');
+  bindCloudStore(profile);
 }catch(error){
-  console.warn('KHALIYA profile sync failed',error);
-}
-
-{
-  const state=readWorkspace();
-  const name=String(profile.name||user.displayName||user.email||'مستخدم').trim();
-  state.user={
-    ...(state.user||{}),
-    uid:user.uid,
-    name,
-    email:user.email||profile.email||'',
-    phone:profile.phone||'',
-    role:profile.role||state.user?.role||'engineer',
-    initial:name.slice(0,1)||'م'
-  };
-  if(profile.officeName)state.settings={...(state.settings||{}),office:profile.officeName};
-  writeWorkspace(state);
-  sessionStorage.setItem('nawa-demo-session','1');
+  console.error('KHALIYA profile unavailable',error);
+  location.replace('login.html?error=profile');
+  await new Promise(()=>{});
 }
 
 async function token(){
@@ -157,7 +134,7 @@ function currentContext(){
 function authorizedProjectId(candidate){
   const id=String(candidate||'').trim();
   if(!id)return '';
-  if(profile?.permissions?.allProjects===true)return id;
+  if(profile?.role==='manager'&&profile?.officeId)return id;
   if(Array.isArray(profile?.projectIds)&&profile.projectIds.includes(id))return id;
   return '';
 }
@@ -266,6 +243,10 @@ document.addEventListener('submit',async event=>{
       });
       document.querySelector('#modalBackdrop')?.classList.remove('open');
       toast('تم رفع الملف وإرساله للتحليل والفهرسة');
+      const projectId=authorizedProjectId(selected);
+      if(projectId){
+        updateState(state=>state.files.unshift({id:result.fileId||makeId('FILE'),project:projectId,projectId,name:file.name,code:result.code||makeId('DOC'),discipline:String(data.get('discipline')||''),type:file.name.split('.').pop()?.toUpperCase()||file.type,version:1,updated:new Date().toISOString().slice(0,10),owner:profile.name||user.email,state:result.analysis?'تم التحليل':'جارٍ التحليل',storageKey:result.storageKey||'',downloadUrl:result.downloadUrl||'',analysis:result.analysis||null,visibleTo:result.visibleTo||[user.uid]}));
+      }
       console.info('KHALIYA upload queued',result);
     }catch(error){
       toast('تعذر رفع الملف: '+(error.message||'خطأ'));
@@ -296,9 +277,6 @@ document.addEventListener('click',async event=>{
     event.preventDefault();
     event.stopImmediatePropagation();
     try{await signOut(auth)}finally{
-      const state=readWorkspace();
-      delete state.user;
-      writeWorkspace(state);
       ['nawa-demo-session','nawa-onboarding-role','nawa-onboarding-name','nawa-onboarding-email','nawa-onboarding-office'].forEach(k=>sessionStorage.removeItem(k));
       location.replace('login.html');
     }
