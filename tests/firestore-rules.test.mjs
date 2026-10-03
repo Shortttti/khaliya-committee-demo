@@ -203,3 +203,45 @@ test('an invitation role must match the registered account role', async () => {
   await assertFails(setDoc(doc(db, 'offices', officeId, 'joinRequests', 'client-user'),
     joinPayload({ uid: 'client-user', email: 'client@example.com', role: 'consultant', officeId, code })));
 });
+
+
+test('project manager store queries can read office team and only assigned project data', async () => {
+  const { officeId } = await seedOffice();
+  await testEnv.withSecurityRulesDisabled(async context => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'users', 'pm-reader'), {
+      uid: 'pm-reader', email: 'pm@example.com', role: 'pm', userCode: 'KHL-pm-reader',
+      officeId, officeName: 'مكتب خلية التجريبي', projectIds: ['project-1'], onboardingComplete: true
+    });
+    await setDoc(doc(db, 'offices', officeId, 'team', 'engineer-member'), {
+      id: 'engineer-member', uid: 'engineer-member', role: 'engineer', officeId,
+      visibleTo: ['office-manager', 'pm-reader']
+    });
+    await setDoc(doc(db, 'offices', officeId, 'consultants', 'consultant-one'), {
+      id: 'consultant-one', uid: 'consultant-one', officeId, visibleTo: ['office-manager', 'pm-reader']
+    });
+    await setDoc(doc(db, 'offices', officeId, 'projects', 'project-1'), {
+      id: 'project-1', projectId: 'project-1', officeId, visibleTo: ['pm-reader']
+    });
+    await setDoc(doc(db, 'offices', officeId, 'tasks', 'task-1'), {
+      id: 'task-1', projectId: 'project-1', officeId, visibleTo: ['pm-reader']
+    });
+  });
+  const db = testEnv.authenticatedContext('pm-reader', { email: 'pm@example.com' }).firestore();
+  const team = await assertSucceeds(getDocs(query(
+    collection(db, 'offices', officeId, 'team'), where('officeId', '==', officeId)
+  )));
+  const consultants = await assertSucceeds(getDocs(query(
+    collection(db, 'offices', officeId, 'consultants'), where('officeId', '==', officeId)
+  )));
+  const projects = await assertSucceeds(getDocs(query(
+    collection(db, 'offices', officeId, 'projects'), where('visibleTo', 'array-contains', 'pm-reader')
+  )));
+  const tasks = await assertSucceeds(getDocs(query(
+    collection(db, 'offices', officeId, 'tasks'), where('visibleTo', 'array-contains', 'pm-reader')
+  )));
+  assert.equal(team.size, 1);
+  assert.equal(consultants.size, 1);
+  assert.equal(projects.size, 1);
+  assert.equal(tasks.size, 1);
+});
