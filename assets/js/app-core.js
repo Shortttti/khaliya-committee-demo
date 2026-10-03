@@ -196,7 +196,7 @@ function render(){
  }
  const activeUser=getState().user;
  if(!platformReady||!activeUser){
-  content.innerHTML='<section class="panel panel-pad" role="status"><span class="section-eyebrow">خلية | KHALIYA</span><h1>جارٍ تحميل مساحة العمل</h1><p>نتحقق من الحساب ونحمّل المشاريع والصلاحيات.</p><div class="loading-bar" aria-hidden="true"></div></section>';
+  content.innerHTML='<div class="workspace-boot" role="status" aria-label="جارٍ تجهيز مساحة العمل"><i></i><i></i><i></i></div>';
   return;
  }
  try{
