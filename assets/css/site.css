@@ -95,3 +95,7 @@ body.motion-ready .hero-visual[data-reveal="visible"]{translate:var(--hero-shift
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #b69a55;outline-offset:2px}.button,.feature-card,.account-choice,.wizard-step,.nav-toggle{transition:transform var(--p-transition),box-shadow var(--p-transition),background-color var(--p-transition),border-color var(--p-transition)}.feature-card:hover,.account-choice:hover{border-color:#cbdacb;box-shadow:0 8px 22px rgba(18,60,49,.07);transform:translateY(-1px)}.button:active{transform:translateY(1px)}.wizard-card input:not([type=checkbox]):not([type=radio]):focus,.wizard-card select:focus{box-shadow:var(--p-focus)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 .brand-mark svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+
+.public-brand{display:inline-flex;align-items:center;min-width:0}
+.public-brand-logo{display:block;width:150px;max-height:66px;object-fit:contain}
+@media(max-width:760px){.public-brand-logo{width:125px;max-height:55px}}
