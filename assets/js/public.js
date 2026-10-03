@@ -26,6 +26,7 @@ if(onboarding){
   $('[data-onboard-desc]').textContent=isManager?'أنشئ مساحة المكتب ثم شارك رمز الدعوة مع أعضاء الفريق.':'أدخل رمز الدعوة الذي أرسله لك المكتب أو مدير المشروع.';
   document.querySelectorAll('[data-office-field]').forEach(field=>field.hidden=!isManager);
   document.querySelectorAll('[data-invite-field]').forEach(field=>field.hidden=isManager||isClient);
+  document.querySelectorAll('[data-manager-invite]').forEach(field=>field.hidden=!isManager);
   document.querySelectorAll('[data-client-field]').forEach(field=>field.hidden=!isClient);
   $('[data-step-title]').textContent=isManager?'بيانات المكتب':'رمز الدعوة';
   $('[data-step-desc]').textContent=isManager?'تُحفظ بيانات المكتب في قاعدة البيانات.':'يجب أن يطابق الرمز البريد والدور المسجلين في حسابك.';
@@ -89,6 +90,7 @@ if(onboarding){
           createdAt:serverTimestamp(),updatedAt:serverTimestamp()
         });
         await updateDoc(userRef,{officeId,officeName,projectIds:[],onboardingComplete:true,updatedAt:serverTimestamp()});
+        await setDoc(doc(db,'offices',officeId,'team',current.uid),{id:current.uid,uid:current.uid,userCode:profile.userCode,name:profile.name,email:profile.email,role:profile.role,specialty:profile.specialty||'',officeId,projectIds:[],visibleTo:[current.uid],createdAt:serverTimestamp()});
         sessionStorage.setItem('nawa-onboarding-office',officeName);
         const inviteEmail=$('[name="teammate"]')?.value.trim().toLowerCase();
         if(inviteEmail){
@@ -113,6 +115,7 @@ if(onboarding){
         if(invite.role!==role||invite.status!=='pending')throw new Error('INVITE_INVALID');
         await updateDoc(doc(db,'publicInvites',inviteCode),{acceptedBy:current.uid,status:'accepted',acceptedAt:serverTimestamp()});
         await updateDoc(userRef,{officeId,officeName:invite.officeName||'',projectIds:invite.projectIds||[],onboardingComplete:true,inviteCode,updatedAt:serverTimestamp()});
+        await setDoc(doc(db,'offices',officeId,'team',current.uid),{id:current.uid,uid:current.uid,userCode:profile.userCode,name:profile.name,email:profile.email,role:profile.role,specialty:profile.specialty||'',officeId,projectIds:invite.projectIds||[],visibleTo:[current.uid],createdAt:serverTimestamp()});
       }
       location.href=role==='client'?'client.html':role==='consultant'?'consultations.html':'home.html';
     }catch(error){
