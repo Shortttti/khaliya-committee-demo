@@ -17,31 +17,36 @@ function toast(message){const region=document.querySelector('.toast-region')||((
 function renderHeading(kicker,title,desc,actions=''){return `<div class="page-heading"><div><div class="page-kicker">${kicker}</div><h1>${title}</h1><p>${desc}</p></div><div class="heading-actions">${actions}</div></div>`}
 function button(action,text,kind='btn',ic=''){return `<button class="${kind}" data-action="${action}">${ic?icon(ic):''}${text}</button>`}
 function safeDownloadName(value){return String(value||'KHALIYA').replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,'-').replace(/-+/g,'-').slice(0,80)}
-function loadScriptOnce(src,globalName){return new Promise((resolve,reject)=>{if(globalName&&window[globalName]){resolve(window[globalName]);return}const existing=[...document.scripts].find(s=>s.src===src);if(existing){existing.addEventListener('load',()=>resolve(globalName?window[globalName]:true),{once:true});existing.addEventListener('error',reject,{once:true});return}const script=document.createElement('script');script.src=src;script.async=true;script.onload=()=>resolve(globalName?window[globalName]:true);script.onerror=()=>reject(new Error('تعذر تحميل محرك PDF'));document.head.append(script)})}
+function loadScriptOnce(src,globalName,timeoutMs=12000){return new Promise((resolve,reject)=>{if(globalName&&window[globalName]){resolve(window[globalName]);return}let script=[...document.scripts].find(s=>s.src===src),created=!script;if(created){script=document.createElement('script');script.src=src;script.async=true}let settled=false,timer;const finish=error=>{if(settled)return;settled=true;clearTimeout(timer);script.removeEventListener('load',onload);script.removeEventListener('error',onerror);error?reject(error):resolve(globalName?window[globalName]:true)};const onload=()=>globalName&&!window[globalName]?finish(new Error('لم يوفّر محرك PDF واجهته المطلوبة')):finish();const onerror=()=>finish(new Error('تعذر تحميل محرك PDF من الشبكة'));timer=setTimeout(()=>finish(new Error('انتهت مهلة تحميل محرك PDF')),timeoutMs);script.addEventListener('load',onload,{once:true});script.addEventListener('error',onerror,{once:true});if(created)document.head.append(script)})}
 async function downloadWorkspaceSummaryPdf(){
  const s=getState(),user=s.user||{},office=s.settings.office||user.officeName||'مكتب خلية',now=new Date();
  const totalProjects=s.projects.length,totalTasks=s.tasks.length,done=s.tasks.filter(t=>t.status==='مكتملة').length,overdue=s.tasks.filter(t=>t.status==='متأخرة').length,openChanges=s.changes.filter(x=>!['مكتمل','مغلق'].includes(x.status)).length;
  const cost=s.quantities.reduce((sum,item)=>sum+Number(item.quantity||0)*Number(item.unitCost||0),0);
  const projectRows=s.projects.map(p=>'<tr><td>'+esc(p.name||p.id)+'</td><td>'+esc(p.code||p.id)+'</td><td>'+esc(p.manager||'—')+'</td><td>'+projectProgress(p.id,s)+'%</td></tr>').join('')||'<tr><td colspan="4">لا توجد مشاريع مسجلة.</td></tr>';
  const node=document.createElement('section');
- node.className='khaliya-pdf-sheet';
- node.dir='rtl';
+ node.className='khaliya-pdf-sheet';node.dir='rtl';
  node.innerHTML='<div class="khaliya-pdf-watermark" aria-hidden="true"><img src="assets/brand/khaliya-logo.png" alt=""></div><header dir="ltr"><img class="khaliya-pdf-header-logo" src="assets/brand/khaliya-full-logo-dark.png" alt="خلية | KHALIYA"><div dir="rtl"><h1>ملخص أداء المكتب</h1><p><b>اسم المكتب:</b> '+esc(office)+'</p><small>حُمّل بواسطة: '+esc(user.name||user.email||'مستخدم خلية')+'</small></div></header><div class="khaliya-pdf-meta"><span>تاريخ التقرير: '+esc(now.toLocaleString('ar-SA'))+'</span></div><div class="khaliya-pdf-stats"><article><b>'+totalProjects+'</b><span>مشاريع</span></article><article><b>'+totalTasks+'</b><span>مهام</span></article><article><b>'+done+'</b><span>مهام مكتملة</span></article><article><b>'+overdue+'</b><span>مهام متأخرة</span></article><article><b>'+openChanges+'</b><span>تغييرات مفتوحة</span></article><article><b>'+cost.toLocaleString('en-US')+'</b><span>تكلفة البنود ر.س</span></article></div><h2>حالة المشاريع</h2><table><thead><tr><th>المشروع</th><th>الرمز</th><th>مدير المشروع</th><th>الإنجاز</th></tr></thead><tbody>'+projectRows+'</tbody></table><h2>آخر النشاطات</h2><ul>'+(s.activity.slice(0,10).map(x=>'<li><b>'+esc(x.text||'تحديث')+'</b> — '+esc(x.detail||'')+'</li>').join('')||'<li>لا توجد نشاطات مسجلة.</li>')+'</ul><footer>© KHALIYA | خلية · منصة العمل الهندسي السحابية</footer>';
  document.body.append(node);
+ const printWindow=window.open('about:blank','_blank');
  try{
+   if(printWindow){printWindow.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>جاري تجهيز ملخص خلية</title></head><body style="font-family:Arial,sans-serif;padding:32px;direction:rtl">جاري تجهيز ملف التقرير…</body></html>');printWindow.document.close()}
    await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js','html2pdf');
    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
    const filename=safeDownloadName(office)+'-KHALIYA-summary-'+now.toISOString().slice(0,10)+'.pdf';
    await window.html2pdf().set({margin:[8,8,10,8],filename,image:{type:'jpeg',quality:.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(node).save();
+   if(printWindow&&!printWindow.closed)printWindow.close();
    toast('تم تنزيل ملخص المكتب بصيغة PDF');
  }catch(error){
    console.error('KHALIYA PDF export failed',error);
-   toast('تعذر إنشاء PDF مباشرة؛ سيتم فتح نسخة الطباعة.');
-   const popup=window.open('','_blank');
-   if(popup){popup.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>ملخص خلية</title><style>body{font-family:Arial,sans-serif;padding:32px;direction:rtl}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px}</style></head><body>'+node.outerHTML+'</body></html>');popup.document.close();popup.focus();setTimeout(()=>popup.print(),300)}
+   if(printWindow&&!printWindow.closed){
+     const styles=[...document.querySelectorAll('link[rel="stylesheet"]')].map(link=>'<link rel="stylesheet" href="'+esc(link.href)+'">').join('');
+     printWindow.document.open();
+     printWindow.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><base href="'+esc(document.baseURI)+'"><title>ملخص خلية</title>'+styles+'<style>body{padding:24px;background:#fff}.khaliya-pdf-sheet{margin:0 auto!important;box-shadow:none!important}.khaliya-pdf-watermark{opacity:.08!important}@media print{body{padding:0}.khaliya-pdf-sheet{break-inside:auto}}</style></head><body>'+node.outerHTML+'<script>window.addEventListener("load",()=>setTimeout(()=>{window.focus();window.print()},800))</script></body></html>');
+     printWindow.document.close();
+     toast('تعذر التنزيل المباشر؛ فُتحت نسخة الطباعة. اختر «حفظ كملف PDF».');
+   }else toast('تعذر تنزيل PDF، كما أن نافذة الطباعة حُجبت. اسمح بالنوافذ المنبثقة ثم أعد المحاولة.');
  }finally{node.remove()}
 }
-
 function visualProposalHtml(proposal){const canReview=getState().user?.role==='engineer'&&getState().user?.uid===proposal.employeeUid&&proposal.status==='بانتظار مراجعة الموظف';return '<div class="visual-review"><div class="notice warn">تصور مولّد بالذكاء الاصطناعي للمراجعة فقط؛ لا يُستخدم كمخطط تنفيذي أو بديل لاعتماد المختص.</div><div class="visual-pair"><figure><figcaption>قبل التعديل</figcaption><img src="'+esc(proposal.beforeImage)+'" alt="صورة المخطط قبل التعديل"></figure><figure><figcaption>تصور بعد التعديل</figcaption><img src="'+esc(proposal.afterImage)+'" alt="تصور الذكاء الاصطناعي بعد التعديل"></figure></div><p><b>الحالة:</b> '+esc(proposal.status)+'</p><details><summary>تحليل أثر التغيير والمصادر</summary><div class="visual-analysis">'+esc(proposal.analysis||'')+'</div></details>'+(canReview?'<div class="module-actions"><button class="btn btn-primary" data-action="visual-approve" data-id="'+esc(proposal.id)+'">اعتماد التصور بعد المراجعة</button><button class="btn btn-soft" data-action="visual-revise" data-id="'+esc(proposal.id)+'">طلب إعادة التصور</button></div>':'')+'</div>'}
 function statusClass(v){if(/متأخر|تعارض|عاجل|رفض/.test(v))return 'bad';if(/انتظار|متابعة|تنسيق|مراجعة|عالي/.test(v))return 'warn';if(/معتمد|مكتمل|المسار/.test(v))return 'good';return 'info'}
 function status(text){return `<span class="status ${statusClass(text)}">${esc(text)}</span>`}
