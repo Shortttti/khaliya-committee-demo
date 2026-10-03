@@ -135,6 +135,7 @@ async function uploadFile(file,options={}){
   const visibleTo=[...new Set([user.uid,...(project?.visibleTo||[]),...(project?.managerUids||[]),...(project?.officeManagerUids||[]),project?.clientUid].filter(Boolean))];
   const headers={'Content-Type':file.type||'application/octet-stream','X-File-Name':encodeURIComponent(file.name),'X-Project-Id':options.projectId||'unassigned','X-Visibility':options.visibility||'internal','X-Source-Type':options.sourceType||'project-file','X-Attachment-Kind':options.kind||'document'};
   if(options.officeId)headers['X-Office-Id']=options.officeId;
+  if(options.consultationId)headers['X-Consultation-Id']=options.consultationId;
   const idToken=await token();
   const result=await new Promise((resolve,reject)=>{
     const xhr=new XMLHttpRequest();xhr.open('POST',API_BASE+'/api/files/upload');xhr.timeout=120000;
