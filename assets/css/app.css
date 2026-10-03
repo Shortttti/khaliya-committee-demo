@@ -768,4 +768,4 @@ body.page-leaving{opacity:1!important;filter:none!important}
   background:var(--surface);
 }
 .modal textarea{min-height:96px}
-.modal-open{overflow:hidden}
+.modal-open{overflow:auto}
