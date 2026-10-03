@@ -1,7 +1,7 @@
 import { auth, db } from './firebase.js';
 import { bindCloudStore, getState, updateState, makeId } from './store.js?v=cloud-01';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { doc, getDoc, updateDoc, arrayUnion } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const API_BASE='https://khaliyah-engineering-office.short-story-im.workers.dev';
 const MODULES=new Set([
@@ -305,6 +305,24 @@ document.addEventListener('click',async event=>{
   }
 },true);
 
+async function lookupUserByCode(code,expectedRole){
+  if(profile.role!=='manager')throw new Error('FORBIDDEN');
+  const value=String(code||'').trim();
+  if(!value.startsWith('KHL-'))throw new Error('INVALID_USER_ID');
+  const uid=value.slice(4);
+  const snap=await getDoc(doc(db,'users',uid));
+  if(!snap.exists())throw new Error('USER_NOT_FOUND');
+  const found=snap.data();
+  if(found.userCode!==value||found.officeId!==profile.officeId)throw new Error('USER_NOT_IN_OFFICE');
+  if(expectedRole&&found.role!==expectedRole)throw new Error('ROLE_MISMATCH');
+  return found;
+}
+async function addProjectMembership(uid,projectId){
+  if(profile.role!=='manager')throw new Error('FORBIDDEN');
+  const snap=await getDoc(doc(db,'users',uid));
+  if(!snap.exists()||snap.data().officeId!==profile.officeId)throw new Error('USER_NOT_IN_OFFICE');
+  await updateDoc(doc(db,'users',uid),{projectIds:arrayUnion(projectId)});
+}
 window.KHALIYA_PLATFORM=Object.freeze({
   apiBase:API_BASE,
   user,
@@ -313,6 +331,8 @@ window.KHALIYA_PLATFORM=Object.freeze({
   ai,
   uploadFile,
   indexText,
+  lookupUserByCode,
+  addProjectMembership,
   currentContext,
   refreshToken:()=>auth.currentUser?.getIdToken(true),
   signOut:()=>signOut(auth)
