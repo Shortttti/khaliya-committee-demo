@@ -1,7 +1,7 @@
 import './interactions.js?v=khaliya-11';
 import { auth, db } from './firebase.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { doc, getDoc, setDoc, updateDoc, writeBatch, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const $=(selector,root=document)=>root.querySelector(selector);
 const params=new URLSearchParams(location.search);
@@ -117,17 +117,51 @@ if(onboarding){
           if(feedback)feedback.textContent='تم إنشاء الدعوة وحفظها داخل مساحة المكتب: '+inviteCode;
         }
       }else{
-        const inviteCode=String($('[name="invite"]')?.value||$('[name="clientInvite"]')?.value||'').trim();
+        const inviteCode=String($('[name="invite"]')?.value||$('[name="clientInvite"]')?.value||'').trim().toUpperCase();
         if(!inviteCode)throw new Error('INVITE_REQUIRED');
-        const inviteQuery=await getDoc(doc(db,'publicInvites',inviteCode));
+        const inviteRef=doc(db,'publicInvites',inviteCode);
+        const inviteQuery=await getDoc(inviteRef);
         if(!inviteQuery.exists())throw new Error('INVITE_NOT_FOUND');
         const invite=inviteQuery.data(),officeId=invite.officeId;
         if(invite.email?.toLowerCase()!==current.email?.toLowerCase())throw new Error('INVITE_EMAIL_MISMATCH');
-        if(invite.role!==role||invite.status!=='pending')throw new Error('INVITE_INVALID');
-        await updateDoc(doc(db,'publicInvites',inviteCode),{acceptedBy:current.uid,status:'accepted',acceptedAt:serverTimestamp()});
-        await updateDoc(userRef,{officeId,officeName:invite.officeName||'',projectIds:invite.projectIds||[],onboardingComplete:true,inviteCode,updatedAt:serverTimestamp()});
-        await setDoc(doc(db,'offices',officeId,'team',current.uid),{id:current.uid,uid:current.uid,userCode:profile.userCode,name:profile.name,email:profile.email,role:profile.role,specialty:profile.specialty||'',officeId,projectIds:invite.projectIds||[],visibleTo:[current.uid],createdAt:serverTimestamp()});
-        if(role==='consultant')await setDoc(doc(db,'offices',officeId,'consultants',current.uid),{id:current.uid,uid:current.uid,name:profile.name,specialty:profile.specialty||'',available:true,officeId,visibleTo:[current.uid],createdAt:serverTimestamp()});
+        if(invite.role!==role)throw new Error('INVITE_ROLE_MISMATCH');
+        const alreadyAccepted=invite.status==='accepted'&&invite.acceptedBy===current.uid;
+        if(invite.status!=='pending'&&!alreadyAccepted)throw new Error('INVITE_INVALID');
+
+        const userUpdate={
+          officeId,
+          officeName:invite.officeName||'',
+          projectIds:Array.isArray(invite.projectIds)?invite.projectIds:[],
+          onboardingComplete:true,
+          inviteCode,
+          updatedAt:serverTimestamp()
+        };
+
+        if(invite.status==='pending'){
+          const batch=writeBatch(db);
+          batch.update(inviteRef,{acceptedBy:current.uid,status:'accepted',acceptedAt:serverTimestamp()});
+          batch.update(userRef,userUpdate);
+          await batch.commit();
+        }else{
+          await updateDoc(userRef,userUpdate);
+        }
+
+        const memberRecord={
+          id:current.uid,uid:current.uid,userCode:profile.userCode,
+          name:profile.name,email:profile.email,role:profile.role,
+          specialty:profile.specialty||'',officeId,
+          projectIds:Array.isArray(invite.projectIds)?invite.projectIds:[],
+          visibleTo:[current.uid],createdAt:serverTimestamp(),updatedAt:serverTimestamp()
+        };
+        try{
+          await setDoc(doc(db,'offices',officeId,'team',current.uid),memberRecord,{merge:true});
+          if(role==='consultant')await setDoc(doc(db,'offices',officeId,'consultants',current.uid),{
+            id:current.uid,uid:current.uid,name:profile.name,specialty:profile.specialty||'',
+            available:true,officeId,visibleTo:[current.uid],updatedAt:serverTimestamp()
+          },{merge:true});
+        }catch(memberError){
+          console.warn('KHALIYA membership record repair deferred',memberError);
+        }
       }
       location.replace(role==='client'?'client.html':role==='consultant'?'consultations.html':'home.html');
     }catch(error){
@@ -137,6 +171,7 @@ if(onboarding){
         INVITE_REQUIRED:'رمز الدعوة مطلوب للانضمام.',
         INVITE_NOT_FOUND:'رمز الدعوة غير موجود أو انتهت صلاحيته.',
         INVITE_EMAIL_MISMATCH:'هذا الرمز مرتبط ببريد إلكتروني مختلف.',
+        INVITE_ROLE_MISMATCH:'رمز الدعوة مخصص لنوع حساب مختلف.',
         INVITE_INVALID:'الرمز لا يطابق نوع حسابك أو استُخدم مسبقًا.',
         ROLE_MISMATCH:'نوع الحساب لا يطابق ملف التسجيل.',
         PROFILE_MISSING:'لم يُعثر على ملف الحساب في قاعدة البيانات.'
