@@ -207,17 +207,19 @@ service cloud.firestore {
         allow update: if collectionName == 'joinRequests' && signedIn()
           && recordId == request.auth.uid
           && resource.data.uid == request.auth.uid
-          && resource.data.status == 'rejected'
+          && resource.data.status in ['rejected', 'removed']
           && request.resource.data.status == 'pending'
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'specialty', 'status', 'createdAt', 'reviewedByUid', 'reviewedAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'specialty', 'status', 'createdAt', 'reviewedByUid', 'reviewedAt', 'inviteCode', 'managerUids', 'officeName'])
           && validJoinRequest(officeId, recordId);
         allow update: if collectionName == 'joinRequests' && officeManager(officeId)
-          && resource.data.status == 'pending'
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.officeId == officeId
           && request.resource.data.inviteCode == resource.data.inviteCode
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedByUid', 'reviewedAt'])
-          && request.resource.data.status in ['accepted', 'rejected'];
+          && ((resource.data.status == 'pending' && request.resource.data.status in ['accepted', 'rejected'])
+            || (resource.data.status == 'accepted' && request.resource.data.status == 'removed'
+              && getAfter(userPath(resource.data.uid)).data.officeId == ''
+              && !existsAfter(/databases/$(database)/documents/offices/$(officeId)/team/$(resource.data.uid))));
         allow create: if collectionName == 'notifications' && signedIn()
           && request.resource.data.id == recordId
           && request.resource.data.officeId == officeId
