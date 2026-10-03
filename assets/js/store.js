@@ -10,7 +10,7 @@ const defaults=()=>({
   decisions:[],meetings:[],schedule:[],timeline:[],quantities:[],chat:[],meetingRequests:[],consultants:[],consultantSlots:[],teams:[],visualProposals:[],invites:[],
   settings:{office:'',project:'',currency:'SAR',theme:'light',language:'ar',fontSize:'normal'}
 });
-let state=defaults(), profile=null, stop=[], writeQueue=Promise.resolve();
+let state=defaults(), profile=null, stop=[], writeQueue=Promise.resolve(), lastWriteError=null;
 
 const clone=value=>structuredClone(value);
 const localKey=uid=>'khaliya.workspace.v3:'+uid;
@@ -47,11 +47,17 @@ function roleQuery(name){
   return query(ref,where('visibleTo','array-contains',profile.uid));
 }
 function enqueueSync(before,after){
-  const run=()=>syncChanges(before,after);
-  writeQueue=writeQueue.then(run,run).catch(error=>{
-    console.error('KHALIYA Firestore write failed',error);
-    window.dispatchEvent(new CustomEvent('khaliya:data-error',{detail:{operation:'write',error}}));
-  });
+  const run=async()=>{
+    try{
+      await syncChanges(before,after);
+      lastWriteError=null;
+    }catch(error){
+      lastWriteError=error;
+      console.error('KHALIYA Firestore write failed',error);
+      window.dispatchEvent(new CustomEvent('khaliya:data-error',{detail:{operation:'write',error}}));
+    }
+  };
+  writeQueue=writeQueue.then(run,run);
   return writeQueue;
 }
 async function syncChanges(before,after){
@@ -100,6 +106,15 @@ export function bindCloudStore(nextProfile){
   savePreferences();watchWorkspace();emit();
 }
 export function getState(){return state}
+export async function flushPendingWrites(){
+  await writeQueue;
+  if(lastWriteError){
+    const error=lastWriteError;
+    lastWriteError=null;
+    throw error;
+  }
+  return true;
+}
 export function saveState(next){
   const before=clone(state);state=next;savePreferences();emit();
   enqueueSync(before,state);
