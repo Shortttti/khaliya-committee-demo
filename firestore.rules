@@ -91,6 +91,12 @@ service cloud.firestore {
             || (collectionName == 'files' && me().role in ['engineer', 'pm', 'client']
               && projectMember(request.resource.data.projectId)
               && request.resource.data.ownerUid == request.auth.uid)
+            || (collectionName == 'consultantSlots'
+              && me().role in ['client', 'engineer', 'pm']
+              && projectMember(request.resource.data.projectId)
+              && request.resource.data.requestedByUid == request.auth.uid
+              && get(/databases/$(database)/documents/offices/$(officeId)/consultants/$(request.resource.data.consultantUid)).data.available == true
+              && !exists(/databases/$(database)/documents/offices/$(officeId)/consultantSlots/$(recordId)))
             || (collectionName == 'meetingRequests' && hasRole('client')
               && request.resource.data.clientUid == request.auth.uid
               && projectMember(request.resource.data.projectId))
@@ -146,6 +152,8 @@ service cloud.firestore {
                 .hasOnly(['text', 'updatedAt']))
           );
         allow delete: if officeManager(officeId)
+          || (collectionName == 'consultantSlots' && inOffice(officeId)
+            && resource.data.requestedByUid == request.auth.uid)
           || (collectionName == 'chat' && inOffice(officeId)
             && resource.data.authorUid == request.auth.uid);
       }
