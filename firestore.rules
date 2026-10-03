@@ -17,6 +17,16 @@ service cloud.firestore {
     function projectMember(projectId) {
       return signedIn() && me().projectIds is list && projectId in me().projectIds;
     }
+    function managerCompletingOwnedOffice(uid) {
+      return resource.data.role == 'manager'
+        && resource.data.get('onboardingComplete', false) == false
+        && request.resource.data.onboardingComplete == true
+        && request.resource.data.officeId is string
+        && request.resource.data.projectIds is list
+        && request.resource.data.projectIds.size() == 0
+        && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)).data.ownerUid == uid
+        && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)).data.officeId == request.resource.data.officeId;
+    }
     function visibleToMe() {
       return resource.data.visibleTo is list && request.auth.uid in resource.data.visibleTo;
     }
@@ -61,7 +71,8 @@ service cloud.firestore {
             && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.email == request.auth.token.email
             && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.role == request.resource.data.role)
         )
-        && (request.resource.data.projectIds == resource.data.projectIds
+        && (request.resource.data.projectIds == resource.data.get('projectIds', [])
+          || managerCompletingOwnedOffice(uid)
           || (request.resource.data.inviteCode is string
             && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.acceptedBy == uid));
       allow update: if signedIn()
@@ -81,7 +92,14 @@ service cloud.firestore {
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.officeId == officeId;
       allow read: if inOffice(officeId);
-      allow update: if officeManager(officeId)
+      allow update: if (
+          officeManager(officeId)
+          || (signedIn() && hasRole('manager')
+            && resource.data.ownerUid == request.auth.uid
+            && resource.data.officeId == officeId
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['officeId', 'name', 'ownerUid', 'managerUids', 'memberUids', 'city', 'company', 'officeEmail', 'createdAt', 'updatedAt']))
+        )
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.officeId == resource.data.officeId;
       allow delete: if false;
