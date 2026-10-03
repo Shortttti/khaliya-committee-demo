@@ -416,3 +416,18 @@ html[data-theme="dark"] .manager-welcome:after,html[data-theme="dark"] .manager-
 /* Let workspace metric cards use the full dashboard width. */
 .manager-stats{width:100%;max-width:none!important;margin-inline:0!important}
 @media(max-width:900px){.manager-stats{width:100%;max-width:none!important}}
+
+/* Khaliya identity and live quantity summaries */
+.brand-symbol img,.brand-mark img{display:block;width:100%;height:100%;object-fit:contain}
+.brand-symbol img{padding:3px}
+.brand-mark img{padding:2px}
+.quantity-chart{margin-block:14px}
+.quantity-project{padding:14px 0;border-bottom:1px solid var(--line,#e5ebe5)}
+.quantity-project:last-child{border-bottom:0}
+.quantity-project>div{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px}
+.quantity-project>div b{font-size:14px}
+.quantity-project>div span{font-weight:700;color:var(--green-700,#176448)}
+.quantity-project>i,.quantity-project>i>i{display:block;height:8px;border-radius:999px}
+.quantity-project>i{overflow:hidden;background:var(--surface-muted,#edf2ed)}
+.quantity-project>i>i{background:linear-gradient(90deg,#4a8a5e,#a9c782);transition:width .5s ease}
+.quantity-project small{display:block;margin-top:7px;color:var(--text-muted,#718078)}
