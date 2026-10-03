@@ -724,3 +724,10 @@ body:not(.page-entering) .toast{animation:khaliyaToastIn .42s cubic-bezier(.16,.
 @media(prefers-reduced-motion:reduce){
   [data-app-fallback]>div,.workspace-boot i{animation:none!important;background:#b9d5c5!important}
 }
+
+
+/* Faster navigation feel */
+body.page-entering .main-shell,
+body.page-entering .sidebar{
+  animation-duration:.18s!important;
+}
