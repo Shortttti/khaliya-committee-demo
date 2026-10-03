@@ -391,7 +391,7 @@ async function processFileJob(env, job) {
   let conversion = 'raw-text';
 
   if (isPlainTextExtension(ext, job.contentType)) {
-    text = new TextDecoder('utf-8', { fatal: false }).decode(arrayBuffer);
+    text = new TextDecoder().decode(arrayBuffer);
   } else if (isMarkdownConvertible(ext, job.contentType)) {
     conversion = 'toMarkdown';
     const converted = await env.AI.toMarkdown(
@@ -705,7 +705,5 @@ async function readJson(request) {
 }
 
 function httpError(status, message) {
-  const error = new Error(message);
-  error.status = status;
-  return error;
+  return Object.assign(new Error(message), { status });
 }
