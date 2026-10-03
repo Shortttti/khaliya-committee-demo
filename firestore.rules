@@ -152,6 +152,8 @@ service cloud.firestore {
 
       match /{collectionName}/{recordId} {
         allow read: if canReadOfficeRecord(officeId, collectionName);
+        allow get: if collectionName == 'joinRequests'
+          && signedIn() && recordId == request.auth.uid;
         allow create: if inOffice(officeId)
           && request.resource.data.officeId == officeId
           && request.resource.data.id == recordId
