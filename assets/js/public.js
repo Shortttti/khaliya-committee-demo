@@ -31,13 +31,23 @@ if(onboarding){
   const roleInfo=roles[role];
   const isManager=role==='manager';
   const isClient=role==='client';
+  const setFieldGroup=(selector,visible)=>{
+    document.querySelectorAll(selector).forEach(group=>{
+      group.hidden=!visible;
+      group.querySelectorAll('input,select,textarea,button').forEach(control=>{
+        control.disabled=!visible;
+        if(control.matches('[name="office"]'))control.required=visible;
+        if(control.matches('[name="invite"],[name="clientInvite"]'))control.required=visible;
+      });
+    });
+  };
   $('[data-role-label]').textContent=roleInfo.label;
   $('[data-onboard-title]').textContent=isManager?'لنجهّز مساحة مكتبك.':isClient?'اربط حسابك بمشروعك.':'اربط حسابك بمكتبك.';
   $('[data-onboard-desc]').textContent=isManager?'أنشئ مساحة المكتب ثم شارك رمز الدعوة مع أعضاء الفريق.':'أدخل رمز الدعوة الذي أرسله لك المكتب أو مدير المشروع.';
-  document.querySelectorAll('[data-office-field]').forEach(field=>field.hidden=!isManager);
-  document.querySelectorAll('[data-invite-field]').forEach(field=>field.hidden=isManager||isClient);
-  document.querySelectorAll('[data-manager-invite]').forEach(field=>field.hidden=!isManager);
-  document.querySelectorAll('[data-client-field]').forEach(field=>field.hidden=!isClient);
+  setFieldGroup('[data-office-field]',isManager);
+  setFieldGroup('[data-invite-field]',!isManager&&!isClient);
+  setFieldGroup('[data-manager-invite]',isManager);
+  setFieldGroup('[data-client-field]',isClient);
   $('[data-step-title]').textContent=isManager?'بيانات المكتب':'رمز الدعوة';
   $('[data-step-desc]').textContent=isManager?'تُحفظ بيانات المكتب في قاعدة البيانات.':'يجب أن يطابق الرمز البريد والدور المسجلين في حسابك.';
   $('[data-step2-title]').textContent=isManager?'التخصصات والفريق':'معلومات إضافية';
@@ -77,8 +87,10 @@ if(onboarding){
     if(feedback)feedback.textContent='سيُنشأ رمز الدعوة بعد حفظ مساحة المكتب.';
   });
 
+  onboarding.noValidate=true;
   onboarding.addEventListener('submit',async event=>{
     event.preventDefault();
+    event.stopPropagation();
     const current=await waitForAuthUser(),feedback=$('[data-onboard-feedback]')||$('.invite-feedback'),submit=event.target.querySelector('[type="submit"]');
     if(!current){if(feedback)feedback.textContent='انتهت جلسة التسجيل. سجّل الدخول ثم أكمل الإعداد.';return;}
     if(submit){submit.disabled=true;submit.textContent='جارٍ الحفظ…';}
