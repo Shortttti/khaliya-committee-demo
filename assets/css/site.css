@@ -275,3 +275,36 @@ body{
 .khaliya-ambient i:nth-child(1){background:radial-gradient(circle,rgba(55,153,102,.17),transparent 68%)}
 .khaliya-ambient i:nth-child(2){background:radial-gradient(circle,rgba(61,111,159,.12),transparent 70%)}
 .khaliya-ambient i:nth-child(3){background:radial-gradient(circle,rgba(190,155,72,.12),transparent 70%)}
+
+
+/* KHALIYA calm idle pass — keep motion interactive, stop constant movement */
+.site-header .public-brand-logo,
+.hero:before,
+.hero:after,
+.hero-visual,
+.hero-visual .thread-card,
+.feature-card:before,
+.role-grid article:before,
+.feature-index,
+.workflow-section:before,
+.security-band,
+.security-band:after,
+.closing-brand-mark,
+.hero-copy .button,
+.closing-cta .button,
+.motion-v3-ready .feature-grid .feature-card,
+.motion-v3-ready .role-grid article,
+.khaliya-ambient i,
+.hero-copy h1,
+.section-heading h2,
+.workflow-layout h2,
+.closing-cta h2{
+  animation:none!important;
+}
+.hero-visual{margin-top:0!important}
+.hero-visual .thread-card{translate:0 0!important}
+.khaliya-ambient i{transform:none!important}
+.security-band{background-position:50% 50%!important}
+.hero-copy h1,.section-heading h2,.workflow-layout h2,.closing-cta h2{background-position:42% 50%!important}
+.feature-card:hover,.role-grid article:hover{transform:translateY(-4px)}
+.button:hover{transform:translateY(-3px) scale(1.012)}
