@@ -92,6 +92,8 @@ async function ai(module,payload={}){
 
 async function uploadFile(file,options={}){
   if(!(file instanceof File))throw new Error('File is required');
+  const workspace=getState(),project=workspace.projects.find(item=>item.id===options.projectId);
+  const visibleTo=[...new Set([user.uid,...(project?.visibleTo||[]),...(project?.managerUids||[]),...(project?.officeManagerUids||[]),project?.clientUid].filter(Boolean))];
   const headers={
     'Content-Type':file.type||'application/octet-stream',
     'X-File-Name':encodeURIComponent(file.name),
@@ -100,7 +102,8 @@ async function uploadFile(file,options={}){
     'X-Source-Type':options.sourceType||'project-file'
   };
   if(options.officeId)headers['X-Office-Id']=options.officeId;
-  return api('/api/files/upload',{body:file,headers});
+  const result=await api('/api/files/upload',{body:file,headers});
+  return {...result,visibleTo,ownerUid:user.uid,project};
 }
 
 async function indexText(payload){
@@ -245,7 +248,7 @@ document.addEventListener('submit',async event=>{
       toast('تم رفع الملف وإرساله للتحليل والفهرسة');
       const projectId=authorizedProjectId(selected);
       if(projectId){
-        updateState(state=>state.files.unshift({id:result.fileId||makeId('FILE'),project:projectId,projectId,name:file.name,code:result.code||makeId('DOC'),discipline:String(data.get('discipline')||''),type:file.name.split('.').pop()?.toUpperCase()||file.type,version:1,updated:new Date().toISOString().slice(0,10),owner:profile.name||user.email,state:result.analysis?'تم التحليل':'جارٍ التحليل',storageKey:result.storageKey||'',downloadUrl:result.downloadUrl||'',analysis:result.analysis||null,visibleTo:result.visibleTo||[user.uid]}));
+        updateState(state=>state.files.unshift({id:result.fileId||makeId('FILE'),project:projectId,projectId,ownerUid:user.uid,visibleTo:result.visibleTo||[user.uid],name:file.name,code:result.code||makeId('DOC'),discipline:String(data.get('discipline')||''),type:file.name.split('.').pop()?.toUpperCase()||file.type,version:1,updated:new Date().toISOString().slice(0,10),owner:profile.name||user.email,state:result.analysis?'تم التحليل':'جارٍ التحليل',storageKey:result.storageKey||'',downloadUrl:result.downloadUrl||'',analysis:result.analysis||null,visibleTo:result.visibleTo||[user.uid]}));
       }
       console.info('KHALIYA upload queued',result);
     }catch(error){
