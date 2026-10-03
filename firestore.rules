@@ -11,6 +11,11 @@ service cloud.firestore {
     function inOffice(officeId) {
       return signedIn() && me().officeId == officeId;
     }
+    function isUnlinkedProfile(profileData) {
+      return !('officeId' in profileData)
+        || profileData.officeId == null
+        || profileData.officeId == '';
+    }
     function officeManager(officeId) {
       return inOffice(officeId) && me().role == 'manager';
     }
@@ -66,7 +71,7 @@ service cloud.firestore {
         && request.resource.data.userCode == 'KHL-' + uid;
       allow read: if (signedIn() && request.auth.uid == uid)
         || (signedIn() && me().role == 'manager' && (me().officeId == resource.data.officeId
-          || (resource.data.officeId == ''
+          || (isUnlinkedProfile(resource.data)
             && get(/databases/$(database)/documents/offices/$(me().officeId)/joinRequests/$(uid)).data.status == 'pending')));
       allow update: if signedIn() && request.auth.uid == uid
         && request.resource.data.uid == resource.data.uid
@@ -101,7 +106,7 @@ service cloud.firestore {
       allow update: if signedIn()
         && me().role == 'manager'
         && (me().officeId == resource.data.officeId
-          || (resource.data.officeId == ''
+          || (isUnlinkedProfile(resource.data)
             && request.resource.data.officeId == me().officeId
             && getAfter(/databases/$(database)/documents/offices/$(me().officeId)/joinRequests/$(uid)).data.status == 'accepted'))
         && request.resource.data.uid == resource.data.uid
@@ -111,7 +116,7 @@ service cloud.firestore {
         && (
           (request.resource.data.officeId == resource.data.officeId
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['projectIds', 'updatedAt']))
-          || (resource.data.officeId == ''
+          || (isUnlinkedProfile(resource.data)
             && request.resource.data.officeId == me().officeId
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['officeId', 'officeName', 'projectIds', 'onboardingComplete', 'inviteCode', 'joinRequestStatus', 'updatedAt'])
             && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)/joinRequests/$(uid)).data.status == 'accepted'
@@ -308,7 +313,7 @@ service cloud.firestore {
         && requestData.email == request.auth.token.email
         && requestData.role == userData.role
         && requestData.role in ['pm', 'engineer', 'client', 'consultant']
-        && userData.officeId == ''
+        && isUnlinkedProfile(userData)
         && userData.onboardingComplete == false
         && requestData.officeId == officeId
         && requestData.officeName == inviteData.officeName
