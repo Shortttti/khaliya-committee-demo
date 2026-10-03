@@ -4,6 +4,7 @@ import englishExtra from './english-extra.js?v=khaliya-07';
 import './interactions.js?v=khaliya-07';
 
 window.KHALIYA_APP_STARTED=true;
+window.addEventListener('khaliya:platform-ready',()=>{platformReady=true;platformError=null;render()});
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)], page=document.body.dataset.page||'overview';
 const content=$('#appContent');let aiPending=false;
 const readImageData=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error('تعذر قراءة الصورة'));reader.readAsDataURL(file)});
