@@ -46,13 +46,28 @@ function roleQuery(name){
   if(profile.role==='consultant'&&name==='consultantSlots')return query(ref,where('consultantUid','==',profile.uid));
   return query(ref,where('visibleTo','array-contains',profile.uid));
 }
+function rollbackFailedWrite(before,after){
+  const restored=clone(state);
+  for(const name of COLLECTIONS){
+    const prior=Array.isArray(before[name])?before[name]:[],attempted=Array.isArray(after[name])?after[name]:[],current=Array.isArray(restored[name])?restored[name]:[];
+    const oldMap=new Map(prior.map((row,index)=>[idOf(row,index),row])),newMap=new Map(attempted.map((row,index)=>[idOf(row,index),row]));
+    for(const [id,nextRow] of newMap){
+      if(JSON.stringify(oldMap.get(id))===JSON.stringify(nextRow))continue;
+      const position=current.findIndex((row,index)=>idOf(row,index)===id);
+      if(position<0||JSON.stringify(current[position])!==JSON.stringify(nextRow))continue;
+      if(oldMap.has(id))current[position]=clone(oldMap.get(id));else current.splice(position,1);
+    }
+    restored[name]=current;
+  }
+  state=restored;savePreferences();emit();
+}
 function enqueueSync(before,after,revision){
   const owner={uid:profile?.uid||'',officeId:profile?.officeId||''};
   const run=()=>syncChanges(before,after,owner);
   const pending=writeQueue.then(run,run);
   writeQueue=pending;
   pending.catch(error=>{
-    if(stateRevision===revision){state=clone(before);savePreferences();emit()}
+    if(stateRevision===revision)rollbackFailedWrite(before,after);
     console.error('KHALIYA Firestore write failed',error);
     window.dispatchEvent(new CustomEvent('khaliya:data-error',{detail:{operation:'write',error}}));
   });
