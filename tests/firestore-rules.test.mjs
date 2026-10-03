@@ -66,6 +66,7 @@ async function submitRequest({ uid, email, role = 'engineer', officeId, code, pr
   });
   const db = testEnv.authenticatedContext(uid, { email }).firestore();
   const requestRef = doc(db, 'offices', officeId, 'joinRequests', uid);
+  await assertSucceeds(getDoc(requestRef));
   const notificationId = 'NTF-' + uid;
   const batch = writeBatch(db);
   batch.set(requestRef, joinPayload({ uid, email, role, officeId, code }));
@@ -138,6 +139,7 @@ test('non-members cannot forge a join request or link themselves to an office', 
     officeId: '', officeName: '', projectIds: [], onboardingComplete: false
   }));
   const db = testEnv.authenticatedContext('outsider', { email: 'outsider@example.com' }).firestore();
+  await assertFails(getDoc(doc(db, 'offices', officeId, 'joinRequests', 'another-user')));
   const batch = writeBatch(db);
   batch.set(doc(db, 'offices', officeId, 'joinRequests', 'outsider'),
     joinPayload({ uid: 'outsider', email: 'outsider@example.com', officeId, code: 'KHALIYA-INV-99999999' }));
