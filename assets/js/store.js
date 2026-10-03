@@ -3,11 +3,11 @@ import {
   collection, doc, deleteDoc, onSnapshot, query, setDoc, where, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
-const COLLECTIONS=['projects','tasks','changes','files','approvals','team','activity','notifications','clientRequests','consultations','decisions','meetings','schedule','timeline','quantities','chat','meetingRequests','consultants','consultantSlots'];
+const COLLECTIONS=['projects','tasks','changes','files','approvals','team','activity','notifications','clientRequests','consultations','decisions','meetings','schedule','timeline','quantities','chat','meetingRequests','consultants','consultantSlots','teams','visualProposals'];
 const defaults=()=>({
   user:null,role:'engineer',language:'ar',projects:[],tasks:[],changes:[],files:[],
   approvals:[],team:[],activity:[],notifications:[],clientRequests:[],consultations:[],
-  decisions:[],meetings:[],schedule:[],timeline:[],quantities:[],chat:[],meetingRequests:[],consultants:[],consultantSlots:[],
+  decisions:[],meetings:[],schedule:[],timeline:[],quantities:[],chat:[],meetingRequests:[],consultants:[],consultantSlots:[],teams:[],visualProposals:[],
   settings:{office:'',project:'',currency:'SAR',theme:'light',language:'ar',fontSize:'normal'}
 });
 let state=defaults(), profile=null, stop=[], writeQueue=Promise.resolve();
@@ -40,6 +40,7 @@ function wire(row,id,name){
 function roleQuery(name){
   const ref=collectionPath(name);
   if(profile.role==='manager'||name==='consultants'||(profile.role==='pm'&&name==='team'))return query(ref,where('officeId','==',profile.officeId));
+  if(profile.role==='pm'&&name==='teams')return query(ref,where('visibleTo','array-contains',profile.uid));
   if(profile.role==='consultant'&&name==='consultations')return query(ref,where('consultantUid','==',profile.uid));
   if(profile.role==='consultant'&&name==='consultantSlots')return query(ref,where('consultantUid','==',profile.uid));
   return query(ref,where('visibleTo','array-contains',profile.uid));

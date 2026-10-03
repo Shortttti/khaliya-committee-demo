@@ -103,9 +103,28 @@ async function uploadFile(file,options={}){
   };
   if(options.officeId)headers['X-Office-Id']=options.officeId;
   const result=await api('/api/files/upload',{body:file,headers});
-  return {...result,visibleTo,ownerUid:user.uid,project};
+  return {...result,storageKey:result.storageKey||result.key||'',fileId:result.fileId||'',visibleTo,ownerUid:user.uid,project};
 }
 
+async function conceptImage(payload){
+  return api('/api/ai/concept-image',{
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+}
+async function fileStatus(storageKey){
+  if(!storageKey)throw new Error('FILE_KEY_REQUIRED');
+  return api('/api/files/status?key='+encodeURIComponent(storageKey),{method:'GET'});
+}
+async function downloadFile(file){
+  const key=String(file?.storageKey||'');
+  if(!key)throw new Error('FILE_KEY_REQUIRED');
+  const idToken=await token();
+  const response=await fetch(API_BASE+'/api/files/download?key='+encodeURIComponent(key),{headers:{Authorization:'Bearer '+idToken}});
+  if(!response.ok){let message='تعذر تنزيل الملف.';try{const data=await response.json();message=data.error||message}catch{}throw new Error(message)}
+  const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download=String(file.name||'project-file');document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
 async function indexText(payload){
   return api('/api/knowledge/index-text',{
     headers:{'Content-Type':'application/json'},
@@ -361,6 +380,9 @@ window.KHALIYA_PLATFORM=Object.freeze({
   profile,
   health,
   ai,
+  conceptImage,
+  fileStatus,
+  downloadFile,
   uploadFile,
   indexText,
   lookupUserByCode,

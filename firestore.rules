@@ -24,6 +24,7 @@ service cloud.firestore {
       return officeManager(officeId)
         || (collectionName == 'consultants' && inOffice(officeId))
         || (collectionName == 'team' && inOffice(officeId) && hasRole('pm'))
+        || (collectionName == 'teams' && inOffice(officeId) && hasRole('pm') && visibleToMe())
         || (collectionName == 'consultantSlots' && inOffice(officeId)
           && (resource.data.requestedByUid == request.auth.uid || resource.data.consultantUid == request.auth.uid))
         || (collectionName == 'consultations' && inOffice(officeId)
@@ -121,6 +122,18 @@ service cloud.firestore {
             || (collectionName == 'notifications'
               && request.resource.data.createdByUid == request.auth.uid
               && projectMember(request.resource.data.projectId))
+            || (collectionName == 'teams' && officeManager(officeId)
+              && request.resource.data.id == recordId && request.resource.data.visibleTo is list)
+            || (collectionName == 'visualProposals' && hasRole('engineer')
+              && request.resource.data.employeeUid == request.auth.uid
+              && request.resource.data.createdByUid == request.auth.uid
+              && projectMember(request.resource.data.projectId)
+              && request.resource.data.beforeImage is string
+              && request.resource.data.afterImage is string
+              && request.resource.data.beforeImage.size() < 380000
+              && request.resource.data.afterImage.size() < 380000
+              && exists(/databases/$(database)/documents/offices/$(officeId)/tasks/$(request.resource.data.taskId))
+              && get(/databases/$(database)/documents/offices/$(officeId)/tasks/$(request.resource.data.taskId)).data.assigneeUid == request.auth.uid)
             || (collectionName == 'team' && recordId == request.auth.uid
               && request.resource.data.uid == request.auth.uid)
             || (collectionName == 'consultants' && recordId == request.auth.uid
@@ -153,6 +166,10 @@ service cloud.firestore {
               && resource.data.clientUid == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys()
                 .hasOnly(['status', 'clientComment', 'updatedAt']))
+            || (collectionName == 'visualProposals' && hasRole('engineer')
+              && resource.data.employeeUid == request.auth.uid
+              && get(/databases/$(database)/documents/offices/$(officeId)/tasks/$(resource.data.taskId)).data.assigneeUid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedByUid', 'reviewedAt', 'updatedAt']))
             || (collectionName == 'consultations'
               && (resource.data.requesterUid == request.auth.uid
                 || resource.data.consultantUid == request.auth.uid))
