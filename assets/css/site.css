@@ -308,3 +308,9 @@ body{
 .hero-copy h1,.section-heading h2,.workflow-layout h2,.closing-cta h2{background-position:42% 50%!important}
 .feature-card:hover,.role-grid article:hover{transform:translateY(-4px)}
 .button:hover{transform:translateY(-3px) scale(1.012)}
+
+
+/* KHALIYA steady mode — eliminate idle bouncing while keeping intentional transitions */
+body:not(.page-entering) *{animation:none!important}
+body:not(.page-entering) .motion-ripple{animation:khaliyaPublicRipple .62s ease-out forwards!important}
+body:not(.page-entering) .motion-reveal{transition:opacity .78s cubic-bezier(.16,.84,.24,1) var(--reveal-delay,0ms),transform .78s cubic-bezier(.16,.84,.24,1) var(--reveal-delay,0ms),filter .78s ease var(--reveal-delay,0ms)!important}
