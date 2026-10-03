@@ -30,7 +30,7 @@ async function downloadWorkspaceSummaryPdf(){
  const printWindow=window.open('about:blank','_blank');
  try{
    if(printWindow){printWindow.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>جاري تجهيز ملخص خلية</title></head><body style="font-family:Arial,sans-serif;padding:32px;direction:rtl">جاري تجهيز ملف التقرير…</body></html>');printWindow.document.close()}
-   await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js','html2pdf');
+   await loadScriptOnce('assets/js/vendor/html2pdf.bundle.min.js','html2pdf');
    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
    const filename=safeDownloadName(office)+'-KHALIYA-summary-'+now.toISOString().slice(0,10)+'.pdf';
    await window.html2pdf().set({margin:[8,8,10,8],filename,image:{type:'jpeg',quality:.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(node).save();
