@@ -149,8 +149,10 @@ if(signupForm){
     const field=signupForm.querySelector('[data-specialty-field]');
     const other=signupForm.querySelector('[data-other-specialty]');
     const input=other?.querySelector('input');
-    if(field)field.hidden=!['pm','engineer','consultant'].includes(role);
-    if(input){input.required=!other.hidden;input.disabled=other.hidden}
+    const specialtyVisible=['pm','engineer','consultant'].includes(role);
+    if(field)field.hidden=!specialtyVisible;
+    if(other)other.hidden=!specialtyVisible||signupForm.querySelector('[name="specialty"]')?.value!=='other';
+    if(input){input.required=!!specialtyVisible&&signupForm.querySelector('[name="specialty"]')?.value==='other';input.disabled=!specialtyVisible||signupForm.querySelector('[name="specialty"]')?.value!=='other'}
   };
   signupForm.querySelectorAll('[name="role"]').forEach(input=>input.addEventListener('change',updateSpecialty));
   signupForm.querySelector('[name="specialty"]')?.addEventListener('change',()=>{

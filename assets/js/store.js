@@ -10,7 +10,7 @@ const defaults=()=>({
   decisions:[],meetings:[],schedule:[],timeline:[],quantities:[],chat:[],meetingRequests:[],consultants:[],consultantSlots:[],
   settings:{office:'',project:'',currency:'SAR',theme:'light',language:'ar',fontSize:'normal'}
 });
-let state=defaults(), profile=null, stop=[];
+let state=defaults(), profile=null, stop=[], writeQueue=Promise.resolve();
 
 const clone=value=>structuredClone(value);
 const localKey=uid=>'khaliya.workspace.v3:'+uid;
@@ -39,8 +39,18 @@ function wire(row,id,name){
 }
 function roleQuery(name){
   const ref=collectionPath(name);
-  if(profile.role==='manager'||name==='consultants')return query(ref,where('officeId','==',profile.officeId));
+  if(profile.role==='manager'||name==='consultants'||(profile.role==='pm'&&name==='team'))return query(ref,where('officeId','==',profile.officeId));
+  if(profile.role==='consultant'&&name==='consultations')return query(ref,where('consultantUid','==',profile.uid));
+  if(profile.role==='consultant'&&name==='consultantSlots')return query(ref,where('consultantUid','==',profile.uid));
   return query(ref,where('visibleTo','array-contains',profile.uid));
+}
+function enqueueSync(before,after){
+  const run=()=>syncChanges(before,after);
+  writeQueue=writeQueue.then(run,run).catch(error=>{
+    console.error('KHALIYA Firestore write failed',error);
+    window.dispatchEvent(new CustomEvent('khaliya:data-error',{detail:{operation:'write',error}}));
+  });
+  return writeQueue;
 }
 async function syncChanges(before,after){
   if(!canSync())throw new Error('يجب ربط الحساب بمكتب قبل حفظ بيانات المشروع.');
@@ -88,18 +98,12 @@ export function bindCloudStore(nextProfile){
 export function getState(){return state}
 export function saveState(next){
   const before=clone(state);state=next;savePreferences();emit();
-  syncChanges(before,state).catch(error=>{
-    console.error('KHALIYA Firestore write failed',error);
-    window.dispatchEvent(new CustomEvent('khaliya:data-error',{detail:{operation:'write',error}}));
-  });
+  enqueueSync(before,state);
   return state;
 }
 export function updateState(mutator){
   const before=clone(state);mutator(state);savePreferences();emit();
-  syncChanges(before,state).catch(error=>{
-    console.error('KHALIYA Firestore write failed',error);
-    window.dispatchEvent(new CustomEvent('khaliya:data-error',{detail:{operation:'write',error}}));
-  });
+  enqueueSync(before,state);
   return state;
 }
 export function makeId(prefix='KHL'){

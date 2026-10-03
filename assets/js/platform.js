@@ -354,6 +354,7 @@ async function addProjectMembership(uid,projectId){
   if(!snap.exists()||snap.data().officeId!==profile.officeId)throw new Error('USER_NOT_IN_OFFICE');
   await updateDoc(doc(db,'users',uid),{projectIds:arrayUnion(projectId)});
 }
+
 window.KHALIYA_PLATFORM=Object.freeze({
   apiBase:API_BASE,
   user,
