@@ -1,3 +1,4 @@
+document.querySelector('link[href*="assets/css/app.css"]')?.setAttribute('href','assets/css/app.css?v=khaliya-prod-02');
 const root=document.getElementById('appContent');
 const brand='<span style="display:inline-grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#174b37;color:#fff;font-weight:800;margin-inline-end:10px">خ</span><span style="font-weight:800;color:#174b37">خلية <small style="display:block;font-size:.68em;letter-spacing:.12em">KHALIYA</small></span>';
 function showBootError(code){
