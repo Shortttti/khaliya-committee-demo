@@ -1,7 +1,7 @@
 import './interactions.js?v=khaliya-11';
 import { auth, db } from './firebase.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { doc, getDoc, setDoc, updateDoc, writeBatch, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { doc, getDoc, setDoc, updateDoc, writeBatch, serverTimestamp, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const $=(selector,root=document)=>root.querySelector(selector);
 const params=new URLSearchParams(location.search);
@@ -25,6 +25,7 @@ document.querySelector('[data-nav-toggle]')?.addEventListener('click',()=>docume
 document.querySelectorAll('.site-nav a[href^="#"]').forEach(link=>link.addEventListener('click',()=>document.body.classList.remove('nav-open')));
 
 const onboarding=$('[data-onboarding]');
+let stopJoinRequestWatch=null;
 if(onboarding){
   let role=sessionStorage.getItem('khaliya-onboarding-role')||params.get('role')||'manager';
   if(!roles[role])role='manager';
@@ -146,7 +147,8 @@ if(onboarding){
           clearTimeout(saveGuard);
           return;
         }
-        if(existingRequest.exists()&&existingRequest.data().status!=='rejected')throw new Error('REQUEST_ALREADY_EXISTS');
+        const retryingRequest=existingRequest.exists()&&['rejected','removed'].includes(existingRequest.data().status);
+        if(existingRequest.exists()&&!retryingRequest)throw new Error('REQUEST_ALREADY_EXISTS');
         const managerUids=Array.isArray(invite.managerUids)?invite.managerUids:[];
         if(!managerUids.length)throw new Error('INVITE_INVALID');
         const requestData={
@@ -166,7 +168,15 @@ if(onboarding){
           createdAt:serverTimestamp(),readBy:[]
         });
         await batch.commit();
-        if(feedback)feedback.textContent='تم إرسال طلبك إلى المكتب. سيظهر لك إشعار عند قبول الدعوة. معرّف حسابك: '+requestData.userCode+'.';
+        if(feedback)feedback.textContent=(retryingRequest?'أُعيد إرسال طلبك بعد تحديث حالته السابقة. ':'تم إرسال طلبك إلى المكتب. ')+( 'سيظهر لك إشعار عند قبول الدعوة. معرّف حسابك: '+requestData.userCode+'.');
+        stopJoinRequestWatch?.();
+        stopJoinRequestWatch=onSnapshot(requestRef,snapshot=>{
+          if(!snapshot.exists())return;
+          const status=snapshot.data().status;
+          if(status==='accepted')location.replace(role==='client'?'client.html':role==='consultant'?'consultations.html':'home.html');
+          else if(status==='rejected'&&feedback){feedback.textContent='لم يوافق المكتب على الطلب. يمكنك إعادة تقديمه بالرمز الحالي.';if(submit){submit.disabled=false;submit.textContent='إعادة إرسال طلب الانضمام';}}
+          else if(status==='removed'&&feedback){feedback.textContent='تمت إزالة الحساب من المكتب. استخدم رمز المكتب الحالي لإرسال طلب جديد.';if(submit){submit.disabled=false;submit.textContent='طلب انضمام جديد';}}
+        });
         if(submit){submit.disabled=true;submit.textContent='طلبك بانتظار الموافقة';}
         clearTimeout(saveGuard);
         return;
