@@ -239,7 +239,25 @@ function render(){
   content.innerHTML='<section class="panel panel-pad" role="alert"><span class="section-eyebrow">خلية | KHALIYA</span><h1>تعذر تجهيز هذه الصفحة</h1><p>حافظنا على مساحة العمل ظاهرة بدل الصفحة البيضاء. أعد المحاولة، وإذا استمر العطل أرسل رمز التشخيص.</p><code>UI-RENDER</code><p><button class="btn btn-primary" type="button" data-action="retry-render">إعادة المحاولة</button></p></section>';
  }
 }
-function openModal(title,body,submit='حفظ'){let root=$('#modalBackdrop');if(!root){root=document.createElement('div');root.id='modalBackdrop';root.className='modal-backdrop';root.innerHTML='<section class="modal" role="dialog" aria-modal="true"><header class="modal-head"><h2 id="modalTitle"></h2><button class="modal-close" data-action="close-modal" aria-label="إغلاق">×</button></header><form id="modalForm"><div class="modal-body" id="modalBody"></div><footer class="modal-foot"><button class="btn btn-primary" type="submit" id="modalSubmit"></button><button class="btn" type="button" data-action="close-modal">إلغاء</button></footer></form></section>';document.body.append(root)}$('#modalTitle',root).textContent=title;$('#modalBody',root).innerHTML=body;$('#modalSubmit',root).textContent=submit;root.classList.add('open');localizeUi()}
+function openModal(title,body,submit='حفظ'){
+ let root=$('#modalBackdrop');
+ if(!root){
+  root=document.createElement('div');
+  root.id='modalBackdrop';
+  root.className='modal-backdrop';
+  root.innerHTML='<section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><header class="modal-head"><h2 id="modalTitle"></h2><button class="modal-close" type="button" data-action="close-modal" aria-label="إغلاق">×</button></header><form id="modalForm" autocomplete="on"><div class="modal-body" id="modalBody"></div><footer class="modal-foot"><button class="btn btn-primary" type="submit" id="modalSubmit"></button><button class="btn" type="button" data-action="close-modal">إلغاء</button></footer></form></section>';
+  document.body.append(root)
+ }
+ $('#modalTitle',root).textContent=title;
+ $('#modalBody',root).innerHTML=body;
+ $('#modalSubmit',root).textContent=submit;
+ root.classList.add('open');
+ localizeUi();
+ requestAnimationFrame(()=>{
+  const first=root.querySelector('input:not([type="hidden"]):not([disabled]),textarea:not([disabled]),select:not([disabled])');
+  first?.focus({preventScroll:true});
+ });
+}
 function modalFor(action,id=''){const s=getState(),projectOptions=s.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join(''),teamOptions=(s.teams||[]).map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join(''),engineers=s.team.filter(t=>t.uid&&t.role==='engineer');const forms={
 'new-project':['إضافة مشروع',`<div class="form-grid"><div class="field full"><label>اسم المشروع</label><input name="name" required placeholder="اسم واضح للمشروع"></div><div class="field"><label>معرّف العميل</label><input name="clientId" required placeholder="KHL-…"></div><div class="field"><label>معرّف مدير المشروع</label><input name="managerId" required placeholder="KHL-…"></div><div class="field"><label>المدينة</label><input name="location" value="الرياض"></div><div class="field"><label>الموعد المستهدف</label><input type="date" name="due" required></div><div class="field"><label>نوع المشروع</label><select name="type"><option>مبنى تجاري</option><option>سكني</option><option>مكتبي</option><option>بنية تحتية</option></select></div></div>`],
 'new-task':['إضافة مهمة',`<div class="form-grid"><div class="field full"><label>وصف المهمة</label><input name="title" required></div><div class="field"><label>المشروع</label><select name="project">${projectOptions}</select></div><div class="field"><label>الفريق (اختياري)</label><select name="team"><option value="">بدون فريق</option>${teamOptions}</select></div><div class="field"><label>التخصص</label><select name="discipline"><option>معماري</option><option>إنشائي</option><option>ميكانيكي</option><option>كهربائي</option><option>كميات</option><option>إدارة المشروع</option></select></div><div class="field"><label>المسؤول</label><select name="assignee">${s.team.filter(t=>t.uid&&t.role==='engineer').map(t=>`<option value="${esc(t.uid)}">${esc(t.userCode||t.uid)} · ${esc(t.name)}</option>`).join('')}</select></div><div class="field"><label>الموعد</label><input name="due" type="date" required></div><div class="field"><label>الأولوية</label><select name="priority"><option>متوسطة</option><option>عالية</option><option>عادية</option></select></div></div>`],
@@ -378,7 +396,21 @@ async function handleModalSubmit(form){
  }
 }
 render();
-window.addEventListener('khaliya:state',()=>render());
+let deferredWorkspaceRender=false;
+function editableHasFocus(){
+ const active=document.activeElement;
+ return !!(active&&(active.matches?.('input,textarea,select,[contenteditable="true"]')||active.closest?.('form')));
+}
+function flushDeferredWorkspaceRender(){
+ if(!deferredWorkspaceRender||editableHasFocus())return;
+ deferredWorkspaceRender=false;
+ render();
+}
+window.addEventListener('khaliya:state',()=>{
+ if(editableHasFocus()){deferredWorkspaceRender=true;return}
+ render();
+});
+document.addEventListener('focusout',()=>setTimeout(flushDeferredWorkspaceRender,0));
 window.addEventListener('khaliya:data-error',event=>{const op=event.detail?.operation;toast(op==='write'?'تعذر حفظ التغيير. تحقق من صلاحيات المكتب واتصل بالمسؤول.':'تعذر تحميل بيانات المكتب.');});
 document.addEventListener('click',e=>{const action=e.target.closest('[data-action]');if(action){const a=action.dataset.action,id=action.dataset.id;if(a==='retry-render'){location.reload();return}if(a==='language-toggle'){updateState(s=>{s.settings.language=s.settings.language==='en'?'ar':'en'});render();return}if(a==='achievement'){const card=e.target.closest('.task-achievement'),detail=card?.querySelector('.achievement-detail'),expanded=e.target.getAttribute('aria-expanded')==='true';if(card&&detail){e.target.setAttribute('aria-expanded',String(!expanded));detail.hidden=expanded;card.classList.toggle('is-expanded',!expanded)}return}if(a==='theme-toggle'){updateState(s=>{s.settings.theme=s.settings.theme==='dark'?'light':'dark'});render();return}if(a==='font-decrease'||a==='font-increase'){const sizes=['small','normal','large'];updateState(s=>{const i=Math.max(0,sizes.indexOf(s.settings.fontSize||'normal'));s.settings.fontSize=sizes[Math.max(0,Math.min(2,i+(a==='font-increase'?1:-1)))]});render();return}if(a==='logout'){window.KHALIYA_PLATFORM.signOut().then(()=>{['khaliya-onboarding-role','khaliya-onboarding-name','khaliya-onboarding-email','khaliya-onboarding-office','nawa-onboarding-role','nawa-onboarding-name','nawa-onboarding-email','nawa-onboarding-office'].forEach(key=>sessionStorage.removeItem(key));location.replace('login.html')}).catch(error=>toast('تعذر تسجيل الخروج: '+(error.message||'خطأ')));return}if(a==='analyze'||a==='report'){
  const s=getState(),projectId=new URLSearchParams(location.search).get('project')||s.settings.project||'',project=s.projects.find(p=>p.id===projectId)||s.projects[0];
@@ -435,10 +467,19 @@ $('#projectStatus')?.addEventListener('change',filterProjects);
 $('#taskFilter')?.addEventListener('input',e=>{const query=e.target.value.trim().toLowerCase();document.querySelectorAll('.task-table tbody tr').forEach(row=>row.hidden=query!==''&&!row.textContent.toLowerCase().includes(query))});
 $('#taskProject')?.addEventListener('change',e=>location.href=e.target.value?`tasks.html?project=${e.target.value}`:'tasks.html');
 
-document.addEventListener('click',e=>{if(e.target.id==='modalBackdrop')e.target.classList.remove('open')});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('#modalBackdrop')?.classList.remove('open');document.body.classList.remove('menu-open')}});
+function closeWorkspaceModal(){
+ $('#modalBackdrop')?.classList.remove('open');
+}
+document.addEventListener('pointerdown',e=>{
+ const backdrop=e.target.closest?.('#modalBackdrop');
+ if(backdrop&&e.target===backdrop){e.preventDefault();closeWorkspaceModal()}
+},{capture:true});
+document.addEventListener('click',e=>{
+ const close=e.target.closest?.('[data-action="close-modal"]');
+ if(close){e.preventDefault();e.stopPropagation();closeWorkspaceModal()}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeWorkspaceModal();document.body.classList.remove('menu-open')}});
 
 document.addEventListener('click',e=>{if(!e.target.closest('.notification-wrap'))closeNotificationPanel()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNotificationPanel()});
-const platformStartupTimer=setTimeout(()=>{if(!platformReady&&!platformError){platformError='PLATFORM-STARTUP-TIMEOUT';render()}},12000);
-import('./platform.js?v=khaliya-07').then(()=>{platformReady=true;platformError=null;clearTimeout(platformStartupTimer);render()}).catch(error=>{console.error('KHALIYA platform failed to start',error);clearTimeout(platformStartupTimer);platformError='PLATFORM-STARTUP-FAILED';render()});
+
 });
