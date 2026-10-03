@@ -1,3 +1,4 @@
+import './interactions.js?v=khaliya-motion-01';
 import { auth, db } from './firebase.js';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
