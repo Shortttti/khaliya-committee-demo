@@ -224,3 +224,54 @@ body.page-entering main,body.page-entering .site-header,body.page-entering .auth
 @keyframes khaliyaCtaPulse{50%{box-shadow:0 12px 30px rgba(38,112,76,.18),0 0 0 5px rgba(51,131,90,.035)}}
 .site-footer .public-brand-logo{transition:transform .3s ease}.site-footer .public-brand:hover .public-brand-logo{transform:rotate(-2deg) scale(1.025)}
 @media(prefers-reduced-motion:reduce){.khaliya-ambient,.khaliya-cursor-trail{display:none!important}.cinematic-section:before{display:none}.motion-v3-ready .feature-grid .feature-card,.motion-v3-ready .role-grid article,.hero-copy .button,.closing-cta .button{animation:none!important}body.page-entering main,body.page-entering .site-header,body.page-entering .auth-header{animation:none!important}}
+
+
+/* KHALIYA color pass — richer public palette without cursor-follow effects */
+:root{--kh-emerald:#1f7a55;--kh-jade:#48a878;--kh-teal:#177d7b;--kh-gold:#b7903d;--kh-blue:#3d6f9f;--kh-rose:#a95f68}
+body{
+  background:
+    radial-gradient(42vw 34vw at 9% 8%,rgba(61,111,159,.065),transparent 72%),
+    radial-gradient(38vw 30vw at 88% 24%,rgba(72,168,120,.075),transparent 72%),
+    radial-gradient(34vw 30vw at 44% 86%,rgba(183,144,61,.06),transparent 72%),
+    #fff;
+}
+.khaliya-cursor-aura,.khaliya-cursor-trail{display:none!important}
+.hero-visual.pointer-active,.feature-card.pointer-active,.role-grid article.pointer-active,.auth-card.pointer-active{transform:none!important}
+.hero-visual:after,.feature-card:after,.role-grid article:after,.auth-card:after{display:none!important}
+.button,.nav-toggle{translate:0 0!important}
+
+.hero-copy h1,.section-heading h2,.workflow-layout h2,.closing-cta h2{
+  background:linear-gradient(110deg,#173d2d 0%,#27825b 34%,#167c7b 55%,#b7903d 78%,#173d2d 100%);
+  background-size:230% auto;-webkit-background-clip:text;background-clip:text;color:transparent
+}
+.hero-visual{background:linear-gradient(150deg,#ffffff 0 58%,#eef8f2 80%,#edf4f9 100%);border-color:#d7e7dd}
+.feature-card:nth-child(1){background:linear-gradient(150deg,#fff,#eef8f2);border-color:#cfe6d8}
+.feature-card:nth-child(2){background:linear-gradient(150deg,#fff,#edf7f6);border-color:#d1e7e5}
+.feature-card:nth-child(3){background:linear-gradient(150deg,#fff,#fbf5e6);border-color:#eadfbd}
+.feature-card:nth-child(4){background:linear-gradient(150deg,#fff,#edf3f9);border-color:#d5e1ed}
+.feature-card:nth-child(5){background:linear-gradient(150deg,#fff,#f8eef0);border-color:#ead7da}
+.feature-card:nth-child(6){background:linear-gradient(150deg,#fff,#edf8f1);border-color:#d5e8da}
+.feature-card:nth-child(1) .feature-index{color:var(--kh-emerald)}
+.feature-card:nth-child(2) .feature-index{color:var(--kh-teal)}
+.feature-card:nth-child(3) .feature-index{color:var(--kh-gold)}
+.feature-card:nth-child(4) .feature-index{color:var(--kh-blue)}
+.feature-card:nth-child(5) .feature-index{color:var(--kh-rose)}
+.feature-card:nth-child(6) .feature-index{color:#348560}
+
+.role-grid article:nth-child(1){background:linear-gradient(145deg,#fff,#eef8f2)}
+.role-grid article:nth-child(2){background:linear-gradient(145deg,#fff,#edf7f6)}
+.role-grid article:nth-child(3){background:linear-gradient(145deg,#fff,#edf3f9)}
+.role-grid article:nth-child(4){background:linear-gradient(145deg,#fff,#fbf5e6)}
+.role-grid article:nth-child(1)>span{color:var(--kh-emerald)}
+.role-grid article:nth-child(2)>span{color:var(--kh-teal)}
+.role-grid article:nth-child(3)>span{color:var(--kh-blue)}
+.role-grid article:nth-child(4)>span{color:var(--kh-gold)}
+
+.workflow-section{background:linear-gradient(145deg,#f4f8f3,#edf6f3 48%,#f7f4ea)}
+.security-band{background:linear-gradient(120deg,#0e3d2d 0%,#155a43 46%,#176765 100%);background-size:180% 180%}
+.closing-cta{background:linear-gradient(120deg,rgba(237,248,241,.78),rgba(255,255,255,.9),rgba(249,244,229,.75));border-radius:26px;padding-inline:28px;margin-block:28px}
+.auth-page{background:linear-gradient(120deg,#f1f7f2 0 38%,#edf5f8 62%,#faf6e9 100%)}
+.auth-card,.wizard-card{background:linear-gradient(150deg,#fff 0 78%,#f1f8f3 100%)}
+.khaliya-ambient i:nth-child(1){background:radial-gradient(circle,rgba(55,153,102,.17),transparent 68%)}
+.khaliya-ambient i:nth-child(2){background:radial-gradient(circle,rgba(61,111,159,.12),transparent 70%)}
+.khaliya-ambient i:nth-child(3){background:radial-gradient(circle,rgba(190,155,72,.12),transparent 70%)}
