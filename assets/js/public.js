@@ -1,4 +1,4 @@
-import './interactions.js?v=khaliya-motion-03';
+import './interactions.js?v=khaliya-color-01';
 import { auth, db } from './firebase.js';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
@@ -146,14 +146,5 @@ if(document.body.classList.contains('public-page')){
     targets.forEach((element,index)=>{element.dataset.reveal='pending';element.style.setProperty('--reveal-delay',(index%4)*55+'ms')});
     const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.dataset.reveal='visible';observer.unobserve(entry.target)}}),{threshold:.12,rootMargin:'0px 0px -5% 0px'});
     targets.forEach(element=>observer.observe(element));
-  }
-  const visual=$('.hero-visual');
-  if(visual&&!reduced&&window.matchMedia('(pointer:fine)').matches){
-    visual.addEventListener('pointermove',event=>{
-      const rect=visual.getBoundingClientRect();
-      visual.style.setProperty('--hero-shift-x',(((event.clientX-rect.left)/rect.width-.5)*5).toFixed(1)+'px');
-      visual.style.setProperty('--hero-shift-y',(((event.clientY-rect.top)/rect.height-.5)*5).toFixed(1)+'px');
-    });
-    visual.addEventListener('pointerleave',()=>{visual.style.setProperty('--hero-shift-x','0px');visual.style.setProperty('--hero-shift-y','0px')});
   }
 }
