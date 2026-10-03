@@ -113,7 +113,7 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['projectIds', 'updatedAt']))
           || (resource.data.officeId == ''
             && request.resource.data.officeId == me().officeId
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['officeName', 'projectIds', 'onboardingComplete', 'inviteCode', 'joinRequestStatus', 'updatedAt'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['officeId', 'officeName', 'projectIds', 'onboardingComplete', 'inviteCode', 'joinRequestStatus', 'updatedAt'])
             && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)/joinRequests/$(uid)).data.status == 'accepted'
             && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)/joinRequests/$(uid)).data.uid == uid
             && getAfter(/databases/$(database)/documents/offices/$(request.resource.data.officeId)/joinRequests/$(uid)).data.officeId == request.resource.data.officeId
