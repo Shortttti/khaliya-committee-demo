@@ -9,7 +9,7 @@ function showBootError(code){
 }
 setTimeout(()=>{if(!window.KHALIYA_APP_STARTED)showBootError('APP-MODULE-TIMEOUT')},8000);
 Promise.all([
-  import('./app-core.js?v=khaliya-14'),
+  import('./app-core.js?v=khaliya-15'),
   import('./platform.js?v=khaliya-13')
 ]).then(()=>window.dispatchEvent(new Event('khaliya:platform-ready')))
   .catch(error=>{console.error('KHALIYA app startup failed',error);showBootError('APP-MODULE-LOAD')});
