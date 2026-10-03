@@ -1,5 +1,6 @@
-import './interactions.js?v=khaliya-07';
+import './interactions.js?v=khaliya-11';
 import { auth, db } from './firebase.js';
+import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const $=(selector,root=document)=>root.querySelector(selector);
@@ -11,6 +12,14 @@ const roles={
   client:{label:'عميل',name:'عميل',office:''},
   consultant:{label:'استشاري',name:'استشاري',office:''}
 };
+
+async function waitForAuthUser(){
+  if(auth.currentUser)return auth.currentUser;
+  return new Promise(resolve=>{
+    let unsubscribe=()=>{};
+    unsubscribe=onAuthStateChanged(auth,user=>{unsubscribe();resolve(user||null)},()=>resolve(null));
+  });
+}
 
 document.querySelector('[data-nav-toggle]')?.addEventListener('click',()=>document.body.classList.toggle('nav-open'));
 document.querySelectorAll('.site-nav a[href^="#"]').forEach(link=>link.addEventListener('click',()=>document.body.classList.remove('nav-open')));
@@ -37,7 +46,7 @@ if(onboarding){
   $('[data-skip]')?.remove();
   document.querySelector('[data-demo-projects]')?.remove();
 
-  let step=1,officeReady=false;
+  let step=1;
   const show=next=>{
     step=next;
     document.querySelectorAll('.wizard-panel').forEach(panel=>panel.classList.toggle('active',Number(panel.dataset.step)===step));
@@ -70,11 +79,10 @@ if(onboarding){
 
   onboarding.addEventListener('submit',async event=>{
     event.preventDefault();
-    const current=auth.currentUser,feedback=$('[data-onboard-feedback]')||$('.invite-feedback'),submit=event.target.querySelector('[type="submit"]');
-    if(officeReady){location.href='home.html';return;}
+    const current=await waitForAuthUser(),feedback=$('[data-onboard-feedback]')||$('.invite-feedback'),submit=event.target.querySelector('[type="submit"]');
     if(!current){if(feedback)feedback.textContent='انتهت جلسة التسجيل. سجّل الدخول ثم أكمل الإعداد.';return;}
     if(submit){submit.disabled=true;submit.textContent='جارٍ الحفظ…';}
-    const saveGuard=setTimeout(()=>{if(submit?.disabled){if(feedback)feedback.textContent='الاتصال بقاعدة البيانات يتأخر. تحققي من الإنترنت ثم أعيدي المحاولة؛ قد يكون الحفظ ما زال جاريًا.';submit.disabled=false;submit.textContent='إعادة المحاولة';}},20000);
+    const saveGuard=setTimeout(()=>{if(submit?.disabled){if(feedback)feedback.textContent='الاتصال بقاعدة البيانات يتأخر. تحققي من الإنترنت ثم أعيدي المحاولة.';submit.disabled=false;submit.textContent='إعادة المحاولة';}},10000);
     try{
       const userRef=doc(db,'users',current.uid);
       const userSnap=await getDoc(userRef);
@@ -97,15 +105,12 @@ if(onboarding){
         const inviteEmail=$('[name="teammate"]')?.value.trim().toLowerCase();
         if(inviteEmail){
           const inviteRole=$('[name="inviteRole"]')?.value||'engineer';
-          const inviteCode='KHL-'+crypto.randomUUID().replaceAll('-','').slice(0,10).toUpperCase();
+          const inviteCode='KHALIYA-INV-'+crypto.randomUUID().replaceAll('-','').slice(0,8).toUpperCase();
           await setDoc(doc(db,'publicInvites',inviteCode),{
             officeId,officeName,email:inviteEmail,role:inviteRole,projectIds:[],
             createdByUid:current.uid,status:'pending',createdAt:serverTimestamp()
           });
-          officeReady=true;
-          if(feedback)feedback.textContent='تم إنشاء الدعوة. أرسل هذا الرمز للموظف: '+inviteCode+' — اضغط زر الدخول بعد نسخه.';
-          $('[data-ready-desc]').textContent='تم إنشاء مساحة المكتب. انسخ رمز الدعوة من الرسالة وأرسله للموظف.';
-          return;
+          if(feedback)feedback.textContent='تم إنشاء الدعوة وحفظها داخل مساحة المكتب: '+inviteCode;
         }
       }else{
         const inviteCode=String($('[name="invite"]')?.value||$('[name="clientInvite"]')?.value||'').trim();
@@ -120,7 +125,7 @@ if(onboarding){
         await setDoc(doc(db,'offices',officeId,'team',current.uid),{id:current.uid,uid:current.uid,userCode:profile.userCode,name:profile.name,email:profile.email,role:profile.role,specialty:profile.specialty||'',officeId,projectIds:invite.projectIds||[],visibleTo:[current.uid],createdAt:serverTimestamp()});
         if(role==='consultant')await setDoc(doc(db,'offices',officeId,'consultants',current.uid),{id:current.uid,uid:current.uid,name:profile.name,specialty:profile.specialty||'',available:true,officeId,visibleTo:[current.uid],createdAt:serverTimestamp()});
       }
-      location.href=role==='client'?'client.html':role==='consultant'?'consultations.html':'home.html';
+      location.replace(role==='client'?'client.html':role==='consultant'?'consultations.html':'home.html');
     }catch(error){
       console.error('KHALIYA onboarding failed',error);
       const messages={
@@ -136,7 +141,7 @@ if(onboarding){
       if(feedback)feedback.textContent=message;
     }finally{
       clearTimeout(saveGuard);
-      if(submit){submit.disabled=false;submit.textContent=officeReady?'المتابعة إلى مساحة العمل':'الدخول إلى مساحة العمل';}
+      if(submit){submit.disabled=false;submit.textContent='الدخول إلى مساحة العمل';}
     }
   });
 }
