@@ -37,7 +37,8 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.role in ['manager', 'pm', 'engineer', 'client', 'consultant']
         && request.resource.data.userCode == 'KHL-' + uid;
-      allow read: if signedIn() && request.auth.uid == uid;
+      allow read: if (signedIn() && request.auth.uid == uid)
+        || (signedIn() && me().role == 'manager' && me().officeId == resource.data.officeId);
       allow update: if signedIn() && request.auth.uid == uid
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.email == resource.data.email
@@ -56,6 +57,15 @@ service cloud.firestore {
         && (request.resource.data.projectIds == resource.data.projectIds
           || (request.resource.data.inviteCode is string
             && getAfter(/databases/$(database)/documents/publicInvites/$(request.resource.data.inviteCode)).data.acceptedBy == uid));
+      allow update: if signedIn()
+        && me().role == 'manager'
+        && me().officeId == resource.data.officeId
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.officeId == resource.data.officeId
+        && request.resource.data.userCode == resource.data.userCode
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['projectIds', 'updatedAt']);
       allow delete: if false;
     }
 
@@ -77,6 +87,9 @@ service cloud.firestore {
           && request.resource.data.visibleTo is list
           && (
             officeManager(officeId)
+            || (collectionName == 'files' && hasRole('engineer')
+              && projectMember(request.resource.data.projectId)
+              && request.resource.data.ownerUid == request.auth.uid)
             || (collectionName == 'clientRequests' && hasRole('client')
               && request.resource.data.clientUid == request.auth.uid
               && projectMember(request.resource.data.projectId))
@@ -86,6 +99,8 @@ service cloud.firestore {
               && projectMember(request.resource.data.projectId))
             || (collectionName == 'meetings'
               && managerOrProjectManager(officeId, request.resource.data.projectId))
+            || (collectionName == 'team' && recordId == request.auth.uid
+              && request.resource.data.uid == request.auth.uid)
             || (collectionName == 'chat' && projectMember(request.resource.data.projectId)
               && request.resource.data.authorUid == request.auth.uid)
           );
