@@ -343,7 +343,8 @@ async function resolveAuthorizedFile(request, env, user) {
   if (!authorizedOfficeIds(user.profile, user.uid).includes(officeId)) throw httpError(403, 'Office scope mismatch');
   if (projectId === 'unassigned') {
     const object = await env.PROJECT_FILES.get(key);
-    if (!object || object.customMetadata?.uid !== user.uid) throw httpError(404, 'File not found');
+    const isSameOfficeManager = user.profile?.role === 'manager' && user.profile?.officeId === officeId;
+    if (!object || (object.customMetadata?.uid !== user.uid && !isSameOfficeManager)) throw httpError(404, 'File not found');
     return { key, object };
   }
   await authorizeProject(user, projectId);
