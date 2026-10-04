@@ -1,5 +1,5 @@
 import './shell.js?v=khaliya-16';
-import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses,roles,flushPendingWrites} from './store.js?v=khaliya-15';
+import {getState,saveState,updateState,makeId,projectById,addActivity,resetState,statuses,roles,flushPendingWrites} from './store.js';
 import englishExtra from './english-extra.js?v=khaliya-09';
 import './interactions.js?v=khaliya-09';
 
