@@ -5,6 +5,7 @@ import { SESSION_KEY } from './store.js?v=demo-02';
 if(!document.querySelector('link[data-demo-css]')){const link=document.createElement('link');link.rel='stylesheet';link.href='assets/css/demo.css';link.dataset.demoCss='';document.head.append(link)}
 
 const sampleUsers = [
+  {uid:'demo-office-owner',name:'مكتب خلية للاستشارات الهندسية',email:'office@khaliya.demo',role:'manager',userCode:'KHL-OFFICE',demoLabel:'المكتب'},
   {uid:'demo-manager',name:'خالد العتيبي',email:'manager@khaliya.demo',role:'manager'},
   {uid:'demo-engineer',name:'سارة القحطاني',email:'engineer@khaliya.demo',role:'engineer',projectIds:['riyadh-center','north-campus','heritage-hotel','airport-terminal','jeddah-hospital','makkah-hotel','khobar-waterfront','riyadh-schools']},
   {uid:'demo-client',name:'أحمد الشمري',email:'client@khaliya.demo',role:'client'},
@@ -21,8 +22,8 @@ function setSession(user, role){
 }
 function fillSamples(){
   const root=$('[data-demo-accounts]');if(!root)return;
-  root.innerHTML=sampleUsers.map(user=>`<button class="demo-account" type="button" data-demo-role="${user.role}"><span class="demo-avatar">${user.name[0]}</span><span><b>${ROLE_LABELS[user.role]}</b><small>${user.name}</small></span><span class="demo-enter">دخول ←</span></button>`).join('');
-  root.addEventListener('click',e=>{const button=e.target.closest('[data-demo-role]');if(!button)return;const user=sampleUsers.find(item=>item.role===button.dataset.demoRole);setSession(user,user.role)});
+  root.innerHTML=sampleUsers.map(user=>`<button class="demo-account" type="button" data-demo-uid="${user.uid}"><span class="demo-avatar">${user.name[0]}</span><span><b>${user.demoLabel||ROLE_LABELS[user.role]}</b><small>${user.name}</small></span><span class="demo-enter">دخول ←</span></button>`).join('');
+  root.addEventListener('click',e=>{const button=e.target.closest('[data-demo-uid]');if(!button)return;const user=sampleUsers.find(item=>item.uid===button.dataset.demoUid);if(user)setSession(user,user.role)});
 }
 fillSamples();
 
