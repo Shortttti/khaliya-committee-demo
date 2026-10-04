@@ -164,6 +164,57 @@ test('a client can submit an office-level request and upload its own unassigned 
   }));
 });
 
+test('office-level consultations can be submitted and consultant slots remain exclusive', async () => {
+  const { officeId } = await seedOffice({ officeId: 'office-consult-test', members: [
+    { uid: 'consult-requester', email: 'requester@example.com', name: 'طالب الاستشارة', role: 'client' },
+    { uid: 'consultant-available', email: 'consultant@example.com', name: 'استشاري متاح', role: 'consultant' }
+  ] });
+  await testEnv.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), 'offices', officeId, 'consultants', 'consultant-available'), {
+      uid: 'consultant-available', officeId, available: true, visibleTo: ['office-manager']
+    });
+  });
+  const requesterDb = testEnv.authenticatedContext('consult-requester', { email: 'requester@example.com' }).firestore();
+  const consultantDb = testEnv.authenticatedContext('consultant-available', { email: 'consultant@example.com' }).firestore();
+  const consultation = {
+    id: 'CON-GENERAL-1', officeId, projectId: '', requesterUid: 'consult-requester',
+    consultantUid: 'consultant-available', title: 'استشارة عامة', description: 'أحتاج مراجعة',
+    mode: 'consultant', status: 'جديد', visibleTo: ['consult-requester', 'consultant-available']
+  };
+  await assertSucceeds(setDoc(doc(requesterDb, 'offices', officeId, 'consultations', consultation.id), consultation));
+  const slotId = 'consultant-available_2026-10-10_10-30';
+  const slot = {
+    id: slotId, officeId, projectId: '', consultantUid: 'consultant-available',
+    requestedByUid: 'consult-requester', consultationId: consultation.id,
+    date: '2026-10-10', time: '10:30', visibleTo: ['consult-requester', 'consultant-available']
+  };
+  await assertSucceeds(setDoc(doc(requesterDb, 'offices', officeId, 'consultantSlots', slotId), slot));
+  await assertFails(setDoc(doc(requesterDb, 'offices', officeId, 'consultantSlots', slotId), slot));
+  await assertSucceeds(setDoc(doc(requesterDb, 'offices', officeId, 'notifications', 'NTF-CONSULT'), {
+    id: 'NTF-CONSULT', officeId, type: 'استشارة', text: 'طلب استشارة جديد',
+    requesterUid: 'consult-requester', recipientUid: 'consultant-available',
+    createdByUid: 'consult-requester', projectId: '', visibleTo: ['consultant-available'],
+    seen: false, createdAt: new Date().toISOString()
+  }));
+  assert.equal((await assertSucceeds(getDoc(doc(consultantDb, 'offices', officeId, 'consultations', consultation.id)))).data().title, 'استشارة عامة');
+  await testEnv.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), 'users', 'unavailable-consultant'), {
+      uid: 'unavailable-consultant', email: 'unavailable@example.com', role: 'consultant',
+      userCode: 'KHL-unavailable-consultant', officeId, projectIds: [], onboardingComplete: true
+    });
+    await setDoc(doc(context.firestore(), 'offices', officeId, 'consultants', 'unavailable-consultant'), {
+      uid: 'unavailable-consultant', officeId, available: false
+    });
+  });
+  await assertFails(setDoc(doc(requesterDb, 'offices', officeId, 'consultations', 'CON-UNAVAILABLE'), {
+    ...consultation, id: 'CON-UNAVAILABLE', consultantUid: 'unavailable-consultant'
+  }));
+  const outsiderDb = testEnv.authenticatedContext('outside-user', { email: 'outside@example.com' }).firestore();
+  await assertFails(setDoc(doc(outsiderDb, 'offices', officeId, 'consultations', 'CON-OUTSIDE'), {
+    ...consultation, id: 'CON-OUTSIDE', requesterUid: 'outside-user'
+  }));
+});
+
 test('one office invite accepts multiple join requests while membership waits for manager approval', async () => {
   const { officeId, code } = await seedOffice();
   await submitRequest({ uid: 'engineer-one', email: 'one@example.com', role: 'pm', officeId, code, profileOfficeId: null });
