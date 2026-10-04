@@ -404,7 +404,9 @@ async function handleModalSubmit(form){
     const fileRow={id:uploaded.fileId||makeId('FILE'),project:project?.id||'',projectId:project?.id||'',name:file.name,code:v('code')||makeId('DOC'),discipline:v('discipline')||'عام',attachmentKind:kind,type:file.name.split('.').pop()?.toUpperCase()||file.type,version:1,updated:new Date().toISOString().slice(0,10),owner:user.name,ownerUid:user.uid,state:'قيد التحليل',storageKey:uploaded.storageKey||'',dataUrl:uploaded.dataUrl||'',downloadUrl:uploaded.downloadUrl||'',visibleTo:[...new Set([user.uid,...(project?.memberUids||[]),...(project?.managerUids||[]),...(project?.officeManagerUids||[]),project?.clientUid].filter(Boolean))]};
     updateState(state=>state.files.unshift(fileRow));
     await flushPendingWrites();
-    $('#modalBackdrop')?.classList.remove('open');render();toast('حُفظ الملف محليًا. بدأ تحليله بالذكاء الاصطناعي.');runFileAnalysis(fileRow,file).then(()=>toast('اكتمل تحليل الملف وحُفظت النتيجة.')).catch(error=>toast('تعذر تحليل الملف: '+(error.message||'خطأ')));\n    return;\n  }else if(key==='new-team'){
+    $('#modalBackdrop')?.classList.remove('open');render();toast('حُفظ الملف محليًا. بدأ تحليله بالذكاء الاصطناعي.');runFileAnalysis(fileRow,file).then(()=>toast('اكتمل تحليل الملف وحُفظت النتيجة.')).catch(error=>toast('تعذر تحليل الملف: '+(error.message||'خطأ')));
+    return;
+  }else if(key==='new-team'){
     if(user.role!=='manager')throw new Error('إنشاء الفرق متاح لمدير المكتب.');
     const name=v('name'),projectId=v('project'),leadUid=v('leadUid'),memberUids=[...new Set([...data.getAll('memberUid').map(String),leadUid].filter(Boolean))],project=projectId?getState().projects.find(p=>p.id===projectId):null;
     if(!name||!memberUids.length)throw new Error('أدخل اسم الفريق واختر عضوًا واحدًا على الأقل.');
