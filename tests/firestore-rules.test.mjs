@@ -165,7 +165,7 @@ test('a client can submit an office-level request and upload its own unassigned 
 });
 
 test('office-level consultations can be submitted and consultant slots remain exclusive', async () => {
-  const { officeId } = await seedOffice({ members: [
+  const { officeId } = await seedOffice({ officeId: 'office-consult-test', members: [
     { uid: 'consult-requester', email: 'requester@example.com', name: 'طالب الاستشارة', role: 'client' },
     { uid: 'consultant-available', email: 'consultant@example.com', name: 'استشاري متاح', role: 'consultant' }
   ] });
