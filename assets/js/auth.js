@@ -6,12 +6,11 @@ if(!document.querySelector('link[data-demo-css]')){const link=document.createEle
 
 const sampleUsers = [
   {uid:'demo-manager',name:'خالد العتيبي',email:'manager@khaliya.demo',role:'manager'},
-  {uid:'demo-pm',name:'نورة الحربي',email:'pm@khaliya.demo',role:'pm'},
   {uid:'demo-engineer',name:'سارة القحطاني',email:'engineer@khaliya.demo',role:'engineer'},
   {uid:'demo-client',name:'أحمد الشمري',email:'client@khaliya.demo',role:'client'},
   {uid:'demo-consultant',name:'فهد المطيري',email:'consultant@khaliya.demo',role:'consultant'}
 ];
-const ROLE_LABELS={manager:'مدير المكتب',pm:'مدير مشروع',engineer:'مهندس',client:'عميل',consultant:'استشاري'};
+const ROLE_LABELS={manager:'مدير المكتب',engineer:'موظف',client:'عميل',consultant:'مستشار'};
 const $=(s,r=document)=>r.querySelector(s);
 function feedback(form,text){const el=$('.form-feedback',form);if(el)el.textContent=text}
 function setSession(user, role){
