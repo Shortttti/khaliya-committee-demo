@@ -397,6 +397,21 @@ async function analyzeIndexedFile(file,status){
   updateState(state=>{const row=state.files.find(item=>item.id===file.id);if(row){row.state='تعذر التحليل';row.analysisError=error.message||'تعذر تحليل الملف'}});await flushPendingWrites();render();throw error
  }
 }
+
+async function monitorIndexedFile(fileRow,{announce=true}={}){
+ if(!fileRow?.storageKey)return;
+ for(let attempt=0;attempt<12;attempt++){
+  try{
+   await new Promise(resolve=>setTimeout(resolve,1500));
+   const status=await window.KHALIYA_PLATFORM.fileStatus(fileRow.storageKey);
+   if(status.indexed){await analyzeIndexedFile(fileRow,status);if(announce)toast('اكتمل تحليل الملف وحُفظت نتيجته.');return}
+   if(!status.processing&&status.reason){updateState(state=>{const row=state.files.find(item=>item.id===fileRow.id);if(row){row.state='تعذر التحليل';row.analysisError=status.reason}});await flushPendingWrites();render();if(announce)toast('تم حفظ الملف لكن تعذر تحليله: '+status.reason);return}
+  }catch(error){
+   if(attempt===11){updateState(state=>{const row=state.files.find(item=>item.id===fileRow.id);if(row){row.state='تعذر التحليل';row.analysisError=error.message||'خطأ غير معروف'}});await flushPendingWrites();render();if(announce)toast('تم حفظ الملف لكن تعذر تحليله: '+(error.message||'خطأ'))}
+  }
+ }
+}
+
 async function handleModalSubmit(form){
  const key=form.dataset.action,data=new FormData(form),v=n=>String(data.get(n)||'').trim(),user=getState().user||{};
  try{
