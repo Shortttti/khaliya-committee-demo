@@ -40,6 +40,7 @@ function wire(row,id,name){
 function roleQuery(name){
   const ref=collectionPath(name);
   if(name==='invites')return query(ref,where('officeId','==',profile.officeId));
+  if(name==='notifications')return query(ref,where('recipientUid','==',profile.uid));
   if(profile.role==='manager'||name==='consultants'||(profile.role==='pm'&&name==='team'))return query(ref,where('officeId','==',profile.officeId));
   if(profile.role==='pm'&&name==='teams')return query(ref,where('visibleTo','array-contains',profile.uid));
   if(profile.role==='consultant'&&name==='consultations')return query(ref,where('consultantUid','==',profile.uid));
