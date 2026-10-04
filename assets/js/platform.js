@@ -1,5 +1,5 @@
 import { auth } from './firebase.js';
-import { getState, updateState, updateLocalOfficeName, makeId, addActivity, SESSION_KEY } from './store.js';
+import { getState, updateState, updateLocalOfficeName, makeId, addActivity, SESSION_KEY } from './store.js?v=demo-02';
 
 const API_BASE='https://khaliyah-engineering-office.short-story-im.workers.dev';
 const MODULES=new Set(['chat','project-summary','file-analysis','change-impact','version-compare','meeting-analysis','decision-analysis','task-extraction','risk-analysis','report','search','catch-up','client-assistant','requirements-analysis','boq-analysis','schedule-impact','coordination-review','consultation','code-compliance','concept-program','concept-massing']);
