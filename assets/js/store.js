@@ -117,6 +117,6 @@ export function resetState(){localStorage.removeItem(STORAGE_KEY);location.reloa
 export function projectById(id,source=state){return source.projects.find(project=>project.id===id)||null}
 export function tasksFor(projectId,source=state){return source.tasks.filter(task=>!projectId||(task.project||task.projectId)===projectId)}
 export function addActivity(text,detail='تحديث في مساحة العمل'){updateState(s=>s.activity.unshift({id:makeId('ACT'),text,detail,time:new Date().toISOString(),visibleTo:['demo-manager','demo-pm','demo-engineer','demo-client','demo-consultant']}))}
-export const roles={manager:'إدارة المكتب',pm:'إدارة المشروع',engineer:'الفريق الهندسي',client:'العميل',consultant:'الاستشاري'};
+export const roles={manager:'مدير المكتب',pm:'مدير المشروع',engineer:'الموظف',client:'العميل',consultant:'المستشار'};
 export const statuses=['قائمة المهام','قيد التنفيذ','قيد المراجعة','متأخرة','مكتملة'];
 export { STORAGE_KEY, SESSION_KEY };
