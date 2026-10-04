@@ -87,7 +87,8 @@ const seed = () => ({
 
 let state = seed();
 let profile = null;
-const clone = value => structuredClone(value);\nfunction mergeRows(defaultRows,savedRows,key='id'){const saved=Array.isArray(savedRows)?savedRows:[],map=new Map(saved.map(row=>[row[key],row])),defaultKeys=new Set(defaultRows.map(row=>row[key]));return [...defaultRows.map(row=>({...row,...(map.get(row[key])||{})})),...saved.filter(row=>!defaultKeys.has(row[key]))]}
+const clone = value => structuredClone(value);
+function mergeRows(defaultRows,savedRows,key='id'){const saved=Array.isArray(savedRows)?savedRows:[],map=new Map(saved.map(row=>[row[key],row])),defaultKeys=new Set(defaultRows.map(row=>row[key]));return [...defaultRows.map(row=>({...row,...(map.get(row[key])||{})})),...saved.filter(row=>!defaultKeys.has(row[key]))]}
 const emit = () => window.dispatchEvent(new CustomEvent('khaliya:state',{detail:state}));
 function persist(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(error){console.warn('Demo storage is full',error)}}
 export function bindCloudStore(nextProfile={}){
