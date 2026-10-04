@@ -1,4 +1,4 @@
-import { auth } from './firebase.js';
+import { auth } from './firebase.js?v=demo-07';
 import { getState, updateState, updateLocalOfficeName, makeId, addActivity, SESSION_KEY } from './store.js?v=demo-02';
 
 const API_BASE='https://khaliyah-engineering-office.short-story-im.workers.dev';
@@ -6,7 +6,7 @@ const MODULES=new Set(['chat','project-summary','file-analysis','change-impact',
 const getSession=()=>{try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null')}catch{return null}};
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function toast(message){let region=document.querySelector('.toast-region');if(!region){region=document.createElement('div');region.className='toast-region';region.setAttribute('aria-live','polite');document.body.append(region)}const node=document.createElement('div');node.className='toast';node.innerHTML='<b>✓</b>'+escape(message);region.append(node);setTimeout(()=>node.remove(),3200)}
-async function token(){if(!auth.currentUser)throw new Error('لتحليل فعلي بالذكاء الاصطناعي، سجّل الدخول بحساب KHALIYA من شاشة الدخول. بيانات مساحة العرض نفسها محفوظة محليًا ولا تتصل بقاعدة البيانات.');return auth.currentUser.getIdToken()}
+async function token(){if(!auth.currentUser)throw new Error('اختر أحد الأدوار التجريبية من صفحة الدخول لتفعيل تحليل الملفات. بيانات العرض محفوظة محليًا ولا تستخدم Firestore.');return auth.currentUser.getIdToken()}
 async function request(path,body){const idToken=await token();const response=await fetch(API_BASE+path,{method:'POST',headers:{Authorization:'Bearer '+idToken,'Content-Type':'application/json'},body:JSON.stringify(body)});let data={};try{data=await response.json()}catch{}if(!response.ok)throw new Error(data.error||'تعذر الاتصال بخدمة KHALIYA AI.');return data}
 async function health(){const response=await fetch(API_BASE+'/health',{cache:'no-store'});if(!response.ok)throw new Error('تعذر الوصول لخدمة الذكاء الاصطناعي');return response.json()}
 async function ai(module,payload={}){if(!MODULES.has(module))throw new Error('وحدة AI غير متاحة: '+module);const context=payload.context||{};return request('/api/ai/'+module,{...payload,context,projectId:'',officeId:'',useKnowledge:false})}
