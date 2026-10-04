@@ -1,4 +1,4 @@
-import { bindCloudStore, SESSION_KEY } from './store.js';
+import { bindCloudStore, SESSION_KEY } from './store.js?v=demo-02';
 import './interactions.js?v=demo-01';
 
 if (!document.querySelector('link[data-demo-css]')) {
