@@ -1,0 +1,23 @@
+:root{--demo-green:#174b37;--demo-green-2:#27674c;--demo-cream:#f5f7f4;--demo-line:#e1e9e2;--demo-ink:#183329}
+body{background:var(--demo-cream)}
+.demo-account-wrap{margin-top:20px;padding-top:16px;border-top:1px solid var(--demo-line)}
+.demo-account-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;color:var(--demo-ink);font-size:.9rem;font-weight:800}
+.demo-account-title small,.demo-account small{display:block;color:#718078;font-size:.76rem;font-weight:500;margin-top:3px}
+.demo-account-list{display:grid;gap:8px}
+.demo-account{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--demo-line);border-radius:13px;background:#fff;text-align:right;color:var(--demo-ink);font:inherit;cursor:pointer;transition:.2s ease}
+.demo-account:hover{transform:translateY(-2px);border-color:#9dbda8;box-shadow:0 8px 22px #164b3710}
+.demo-avatar{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#e8f1eb;color:var(--demo-green);font-weight:800}
+.demo-enter{margin-inline-start:auto;color:var(--demo-green);font-size:.78rem;font-weight:800}
+.demo-pill{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid #cfe0d3;border-radius:99px;background:#f2f7f3;color:#275c41;font-size:.76rem;font-weight:800}
+.demo-pill:before{content:'';width:7px;height:7px;border-radius:50%;background:#30986b}
+.demo-info{margin:12px 0;padding:11px 13px;border-radius:12px;background:#f2f7f3;color:#466453;font-size:.78rem;line-height:1.8}
+.demo-form-option{display:flex;align-items:flex-start;gap:9px;margin:13px 0;color:#52665a;font-size:.8rem;line-height:1.7}
+.demo-form-option input{margin-top:4px;accent-color:var(--demo-green)}
+.demo-login-role{margin:0 0 12px}
+.demo-login-role select,.auth-card input,.auth-card select{font:inherit}
+.demo-top-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding:12px 15px;border:1px solid #dbe8dc;border-radius:14px;background:linear-gradient(110deg,#f5faf6,#fff);color:#415f4d;font-size:.8rem}
+.demo-top-banner b{color:var(--demo-green)}
+.auth-card-wide{max-width:720px}
+.auth-wrap{align-items:start}
+.demo-feedback{min-height:1.3em;color:#984b2d;font-size:.82rem}
+@media(max-width:720px){.demo-top-banner{align-items:flex-start;flex-direction:column}.demo-enter{display:none}}
