@@ -109,6 +109,61 @@ async function updateProfileMembership(db, uid, officeId) {
   return batch.commit();
 }
 
+
+test('project managers can list office team and users can query only their notifications', async () => {
+  const { officeId } = await seedOffice();
+  await testEnv.withSecurityRulesDisabled(async context => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'users', 'pm-reader'), {
+      uid: 'pm-reader', email: 'pm@example.com', role: 'pm', userCode: 'KHL-pm-reader',
+      officeId, officeName: 'مكتب خلية التجريبي', projectIds: [], onboardingComplete: true
+    });
+    await setDoc(doc(db, 'offices', officeId, 'team', 'engineer-member'), {
+      id: 'engineer-member', uid: 'engineer-member', role: 'engineer', officeId,
+      visibleTo: ['office-manager', 'pm-reader']
+    });
+    await setDoc(doc(db, 'offices', officeId, 'notifications', 'pm-note'), {
+      id: 'pm-note', officeId, recipientUid: 'pm-reader', visibleTo: ['pm-reader'], type: 'task'
+    });
+    await setDoc(doc(db, 'offices', officeId, 'notifications', 'manager-note'), {
+      id: 'manager-note', officeId, recipientUid: 'office-manager', visibleTo: ['office-manager'], type: 'task'
+    });
+  });
+  const db = testEnv.authenticatedContext('pm-reader', { email: 'pm@example.com' }).firestore();
+  const team = await assertSucceeds(getDocs(query(
+    collection(db, 'offices', officeId, 'team'), where('officeId', '==', officeId)
+  )));
+  assert.equal(team.size, 1);
+  const notes = await assertSucceeds(getDocs(query(
+    collection(db, 'offices', officeId, 'notifications'), where('recipientUid', '==', 'pm-reader')
+  )));
+  assert.equal(notes.size, 1);
+  await assertFails(getDoc(doc(db, 'offices', officeId, 'notifications', 'manager-note')));
+});
+
+test('a client can submit an office-level request and upload its own unassigned attachment metadata', async () => {
+  const { officeId } = await seedOffice();
+  await testEnv.withSecurityRulesDisabled(async context => setDoc(doc(context.firestore(), 'users', 'client-general'), {
+    uid: 'client-general', email: 'client@example.com', role: 'client', userCode: 'KHL-client-general',
+    officeId, officeName: 'مكتب خلية التجريبي', projectIds: [], onboardingComplete: true
+  }));
+  const db = testEnv.authenticatedContext('client-general', { email: 'client@example.com' }).firestore();
+  await assertSucceeds(setDoc(doc(db, 'offices', officeId, 'clientRequests', 'REQ-GENERAL'), {
+    id: 'REQ-GENERAL', officeId, projectId: '', clientUid: 'client-general', requesterUid: 'client-general',
+    title: 'طلب عام', description: 'أحتاج خدمة من المكتب', status: 'جديد',
+    visibleTo: ['client-general']
+  }));
+  await assertSucceeds(setDoc(doc(db, 'offices', officeId, 'files', 'FILE-GENERAL'), {
+    id: 'FILE-GENERAL', officeId, projectId: '', ownerUid: 'client-general',
+    storageKey: 'files/office-test/unassigned/file/general.pdf', visibleTo: ['client-general']
+  }));
+  const managerDb = testEnv.authenticatedContext('office-manager', { email: 'manager@example.com' }).firestore();
+  assert.equal((await assertSucceeds(getDoc(doc(managerDb, 'offices', officeId, 'clientRequests', 'REQ-GENERAL')))).data().title, 'طلب عام');
+  await assertFails(setDoc(doc(db, 'offices', officeId, 'files', 'FILE-FORGED'), {
+    id: 'FILE-FORGED', officeId, projectId: '', ownerUid: 'another-user', visibleTo: ['client-general']
+  }));
+});
+
 test('one office invite accepts multiple join requests while membership waits for manager approval', async () => {
   const { officeId, code } = await seedOffice();
   await submitRequest({ uid: 'engineer-one', email: 'one@example.com', role: 'pm', officeId, code, profileOfficeId: null });
