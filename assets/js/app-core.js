@@ -376,12 +376,16 @@ const item=forms[action];if(item){openModal(item[0],item[1],['analyze','approval
 async function analyzeIndexedFile(file,status){
  if(!file?.storageKey||!status?.indexed)throw new Error(status?.reason||'لم يكتمل فهرسة محتوى الملف بعد.');
  const projectId=String(file.projectId||file.project||'');
- const result=await window.KHALIYA_PLATFORM.ai('file-analysis',{projectId:projectId||undefined,message:'حلل محتوى الملف المرفق واكتب ملخصًا مهنيًا يتضمن نوعه وغرضه والحقائق والمتطلبات والمخاطر والنواقص والخطوات المقترحة. لا تستنتج معلومات غير موجودة.',useKnowledge:true,context:{fileName:file.name,fileId:file.id,discipline:file.discipline||'',fileType:file.type||''}});
- const matchingSource=(result.sources||[]).some(source=>String(source.sourceId||'')===String(file.id||''));
- if(!matchingSource)throw new Error('اكتملت الفهرسة لكن لم يصل محتوى هذا الملف إلى سياق التحليل. أعد المحاولة بعد قليل.');
- if(!String(result.answer||'').trim())throw new Error('لم يُرجع الذكاء الاصطناعي نتيجة تحليل.');
- updateState(state=>{const row=state.files.find(item=>item.id===file.id);if(row){row.analysis=result.answer;row.analysisSources=(result.sources||[]).map(source=>source.title||source.id);row.state='تم التحليل';row.analysisUpdatedAt=new Date().toISOString()}});
- await flushPendingWrites();render();return result
+ try{
+  const result=await window.KHALIYA_PLATFORM.ai('file-analysis',{projectId:projectId||undefined,message:'حلل محتوى الملف المرفق واكتب ملخصًا مهنيًا يتضمن نوعه وغرضه والحقائق والمتطلبات والمخاطر والنواقص والخطوات المقترحة. لا تستنتج معلومات غير موجودة.',useKnowledge:true,context:{fileName:file.name,fileId:file.id,discipline:file.discipline||'',fileType:file.type||''}});
+  const matchingSource=(result.sources||[]).some(source=>String(source.sourceId||'')===String(file.id||''));
+  if(!matchingSource)throw new Error('اكتملت الفهرسة لكن لم يصل محتوى هذا الملف إلى سياق التحليل. أعد المحاولة بعد قليل.');
+  if(!String(result.answer||'').trim())throw new Error('لم يُرجع الذكاء الاصطناعي نتيجة تحليل.');
+  updateState(state=>{const row=state.files.find(item=>item.id===file.id);if(row){row.analysis=result.answer;row.analysisSources=(result.sources||[]).map(source=>source.title||source.id);row.state='تم التحليل';row.analysisUpdatedAt=new Date().toISOString()}});
+  await flushPendingWrites();render();return result
+ }catch(error){
+  updateState(state=>{const row=state.files.find(item=>item.id===file.id);if(row){row.state='تعذر التحليل';row.analysisError=error.message||'تعذر تحليل الملف'}});await flushPendingWrites();render();throw error
+ }
 }
 async function handleModalSubmit(form){
  const key=form.dataset.action,data=new FormData(form),v=n=>String(data.get(n)||'').trim(),user=getState().user||{};
@@ -582,7 +586,7 @@ document.addEventListener('submit',async e=>{if(e.target.id==='consultationReque
    }catch(error){toast('تعذر رفع مرفق الاستشارة: '+(error.message||'خطأ'));return}
  }
  if(mode==='ai'){
-   try{const result=await window.KHALIYA_PLATFORM.ai('consultation',{message:title+'\\n'+description,projectId:project.id,useKnowledge:true,context:{project,attachment:attachmentMeta,files:state.files.filter(x=>(x.project||x.projectId)===project.id)}});openModal('نتيجة الاستشارة الذكية',esc(result.answer||'لم تصل إجابة.')+'<p>المصادر: '+esc((result.sources||[]).map(x=>x.title||x.id).join('، ')||'لا توجد مصادر مرفقة')+'</p>','إغلاق')}catch(error){toast('تعذر إكمال الاستشارة الذكية: '+(error.message||'خطأ'))}return
+   try{const result=await window.KHALIYA_PLATFORM.ai('consultation',{message:title+'\\n'+description,projectId:project.id,useKnowledge:true,context:{project,attachment:attachmentMeta,files:state.files.filter(x=>(x.project||x.projectId)===project.id)}});const answeredAt=new Date().toISOString(),answerRow={id:makeId('CON'),project:project.id,projectId:project.id,officeId:user.officeId,requester:user.name||'مستخدم',requesterUid:user.uid,consultantName:'مساعد خلية الذكي',specialty:String(d.get('specialty')||''),title,description,answer:String(result.answer||''),sources:(result.sources||[]).map(x=>x.title||x.id),date:answeredAt.slice(0,10),time:answeredAt.slice(11,16),createdAt:answeredAt,status:'تمت الإجابة',mode:'ai',attachment:attachmentMeta,visibleTo:[...new Set([user.uid,...(project.managerUids||[]),...(project.officeManagerUids||[])])]};if(!answerRow.answer)throw new Error('لم يصل رد من المساعد.');updateState(s=>s.consultations.unshift(answerRow));await flushPendingWrites();openModal('نتيجة الاستشارة الذكية',esc(answerRow.answer)+'<p>المصادر: '+esc(answerRow.sources.join('، ')||'لا توجد مصادر مسترجعة')+'</p>','إغلاق')}catch(error){toast('تعذر إكمال أو حفظ الاستشارة الذكية: '+(error.message||'خطأ'))}return
  }
  const consultantUid=String(d.get('consultantUid')||''),date=String(d.get('date')||''),time=String(d.get('time')||'');
  if(!consultantUid||!date||!time){toast('اختر استشاريًا وموعدًا مناسبًا.');return}
