@@ -152,6 +152,7 @@ service cloud.firestore {
 
       match /{collectionName}/{recordId} {
         allow read: if canReadOfficeRecord(officeId, collectionName);
+        allow list: if collectionName == 'team' && inOffice(officeId) && hasRole('pm');
         allow get: if collectionName == 'joinRequests'
           && signedIn() && recordId == request.auth.uid;
         allow create: if inOffice(officeId)
@@ -161,7 +162,8 @@ service cloud.firestore {
           && (
             officeManager(officeId)
             || (collectionName == 'files' && me().role in ['engineer', 'pm', 'client']
-              && projectMember(request.resource.data.projectId)
+              && (projectMember(request.resource.data.projectId)
+                || (me().role == 'client' && request.resource.data.projectId == ''))
               && request.resource.data.ownerUid == request.auth.uid)
             || (collectionName == 'consultantSlots'
               && me().role in ['manager', 'client', 'engineer', 'pm']
@@ -174,7 +176,7 @@ service cloud.firestore {
               && projectMember(request.resource.data.projectId))
             || (collectionName == 'clientRequests' && hasRole('client')
               && request.resource.data.clientUid == request.auth.uid
-              && projectMember(request.resource.data.projectId))
+              && (projectMember(request.resource.data.projectId) || request.resource.data.projectId == ''))
             || (collectionName == 'consultations'
               && me().role in ['client', 'engineer', 'pm', 'manager']
               && request.resource.data.requesterUid == request.auth.uid
