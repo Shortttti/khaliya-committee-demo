@@ -37,7 +37,7 @@ if (!publicPages.has(filename) && filename !== 'onboarding.html' && !session) {
     if (root) root.innerHTML = '<section class="panel panel-pad"><h1>تعذر تحميل نسخة العرض</h1><p>أعد تحميل الصفحة أو ارجع إلى تسجيل الدخول.</p><a class="btn btn-primary" href="login.html">تسجيل الدخول</a></section>';
     return false;
   });
-  import('./platform.js?v=demo-05').catch(error => {
+  import('./platform.js?v=demo-06').catch(error => {
     console.warn('KHALIYA AI service is unavailable in this browser', error);
     return false;
   });

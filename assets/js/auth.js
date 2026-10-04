@@ -1,5 +1,5 @@
-import { auth } from './firebase.js';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+import { auth } from './firebase.js?v=demo-07';
+import { createUserWithEmailAndPassword, signInAnonymously, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { SESSION_KEY } from './store.js?v=demo-02';
 
 if(!document.querySelector('link[data-demo-css]')){const link=document.createElement('link');link.rel='stylesheet';link.href='assets/css/demo.css';link.dataset.demoCss='';document.head.append(link)}
@@ -14,6 +14,21 @@ const sampleUsers = [
 const ROLE_LABELS={manager:'مدير المكتب',engineer:'موظف',client:'عميل',consultant:'مستشار'};
 const $=(s,r=document)=>r.querySelector(s);
 function feedback(form,text){const el=$('.form-feedback',form);if(el)el.textContent=text}
+async function ensureDemoIdentity(){
+  const expectedProject='khaliya-committee-demo-auth';
+  if(auth.currentUser?.isAnonymous){
+    try{
+      const result=await auth.currentUser.getIdTokenResult(true);
+      if(result.claims.aud===expectedProject)return auth.currentUser;
+    }catch{}
+  }
+  try{await signOut(auth)}catch{}
+  return (await signInAnonymously(auth)).user;
+}
+async function enterDemoRole(user){
+  const identity=await ensureDemoIdentity();
+  setSession({...user,firebaseUid:identity.uid},user.role);
+}
 function setSession(user, role){
   const profile={...user,role,officeId:'demo-office',officeName:'مكتب خلية للاستشارات الهندسية',projectIds:['riyadh-center','north-campus','heritage-hotel'],userCode:user.userCode||'KHL-DEMO'};
   localStorage.setItem(SESSION_KEY,JSON.stringify(profile));
@@ -23,22 +38,27 @@ function setSession(user, role){
 function fillSamples(){
   const root=$('[data-demo-accounts]');if(!root)return;
   root.innerHTML=sampleUsers.map(user=>`<button class="demo-account" type="button" data-demo-uid="${user.uid}"><span class="demo-avatar">${user.name[0]}</span><span><b>${user.demoLabel||ROLE_LABELS[user.role]}</b><small>${user.name}</small></span><span class="demo-enter">دخول ←</span></button>`).join('');
-  root.addEventListener('click',e=>{const button=e.target.closest('[data-demo-uid]');if(!button)return;const user=sampleUsers.find(item=>item.uid===button.dataset.demoUid);if(user)setSession(user,user.role)});
+  root.addEventListener('click',async e=>{
+    const button=e.target.closest('[data-demo-uid]');if(!button)return;
+    const user=sampleUsers.find(item=>item.uid===button.dataset.demoUid);if(!user)return;
+    button.disabled=true;
+    feedback(root.closest('.auth-card')||document,'يتم تجهيز الدخول الآمن للذكاء الاصطناعي…');
+    try{await enterDemoRole(user)}
+    catch(error){
+      console.error(error);
+      feedback(root.closest('.auth-card')||document,'تعذر تفعيل الدخول التجريبي. تأكد من إعداد Firebase وحاول مرة أخرى.');
+      button.disabled=false;
+    }
+  });
 }
 fillSamples();
 
 document.querySelector('[data-auth="login"]')?.addEventListener('submit',async event=>{
-  event.preventDefault();const form=event.currentTarget,data=new FormData(form),email=String(data.get('email')||'').trim().toLowerCase(),password=String(data.get('password')||''),role=String(data.get('role')||'manager');
+  event.preventDefault();
+  const form=event.currentTarget,data=new FormData(form),email=String(data.get('email')||'').trim().toLowerCase();
   const local=sampleUsers.find(item=>item.email===email);
-  if(local){setSession(local,local.role);return}
-  feedback(form,'جارٍ التحقق من حساب KHALIYA لتفعيل الذكاء الاصطناعي…');
-  try{
-    const credential=await signInWithEmailAndPassword(auth,email,password);
-    setSession({uid:'ai-'+credential.user.uid,firebaseUid:credential.user.uid,name:credential.user.displayName||email.split('@')[0],email:credential.user.email||email,projectIds:['riyadh-center']},role);
-  }catch(error){
-    console.error(error);
-    feedback(form,error.code==='auth/invalid-credential'||error.code==='auth/user-not-found'?'بيانات الدخول غير صحيحة. اختر حسابًا تجريبيًا أو استخدم حساب KHALIYA فعليًا.':'تعذر تسجيل الدخول. تحقق من البيانات واتصال الإنترنت.');
-  }
+  if(local){await enterDemoRole(local);return}
+  feedback(form,'هذه نسخة عرض: اختر أحد الأدوار الجاهزة بالأسفل، ولا تحتاج إلى بريد أو كلمة مرور.');
 });
 
 document.querySelector('[data-auth="signup"]')?.addEventListener('submit',async event=>{
@@ -58,10 +78,8 @@ document.querySelector('[data-auth="signup"]')?.addEventListener('submit',async 
   setSession(profile,role);
 });
 
-document.querySelector('[data-forgot]')?.addEventListener('click',async event=>{
-  event.preventDefault();const form=event.currentTarget.closest('form'),email=String(form?.querySelector('[name="email"]')?.value||'').trim();
-  if(!email){feedback(form,'اكتب بريد حساب KHALIYA أولًا.');return}
-  try{await sendPasswordResetEmail(auth,email);feedback(form,'أُرسل رابط استعادة كلمة المرور.')}catch{feedback(form,'تعذر إرسال رابط الاستعادة لهذا الحساب.')}
+document.querySelector('[data-forgot]')?.addEventListener('click',event=>{
+  event.preventDefault();
+  feedback(event.currentTarget.closest('form'),'نسخة العرض لا تستخدم كلمات مرور؛ اختر أحد الأدوار الجاهزة.');
 });
-
 document.querySelector('[data-demo-reset]')?.addEventListener('click',async()=>{localStorage.removeItem('khaliya.committee.demo.v1');localStorage.removeItem(SESSION_KEY);try{await signOut(auth)}catch{}location.href='login.html'});
