@@ -1,6 +1,6 @@
 import { auth } from './firebase.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { SESSION_KEY } from './store.js';
+import { SESSION_KEY } from './store.js?v=demo-02';
 
 if(!document.querySelector('link[data-demo-css]')){const link=document.createElement('link');link.rel='stylesheet';link.href='assets/css/demo.css';link.dataset.demoCss='';document.head.append(link)}
 
