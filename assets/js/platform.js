@@ -160,7 +160,8 @@ async function uploadFile(file,options={}){
   if(!(file instanceof File)||!file.size)throw new Error('FILE_REQUIRED');
   if(file.size>50*1024*1024)throw new Error('FILE_TOO_LARGE');
   const workspace=getState(),project=workspace.projects.find(item=>item.id===options.projectId);
-  if(profile.role!=='manager'&&!project)throw new Error('PROJECT_REQUIRED');
+  const isClientRequestAttachment=profile.role==='client'&&options.sourceType==='client-request-attachment'&&!options.projectId;
+  if(profile.role!=='manager'&&!project&&!isClientRequestAttachment)throw new Error('PROJECT_REQUIRED');
   const visibleTo=[...new Set([user.uid,...(project?.visibleTo||[]),...(project?.managerUids||[]),...(project?.officeManagerUids||[]),project?.clientUid].filter(Boolean))];
   const headers={
     'Content-Type':file.type||'application/octet-stream',
