@@ -73,8 +73,13 @@ export default {
       }
 
       const session = await authenticate(request, env);
-      const profile = await loadOwnProfile(session.token, session.uid);
+      const profile = session.isDemo
+        ? { uid: session.uid, role: 'demo', officeId: null, permissions: { officeWideAI: false } }
+        : await loadOwnProfile(session.token, session.uid);
       const user = { ...session, profile };
+      if (user.isDemo && !(request.method === 'POST' && url.pathname === '/api/ai/file-analysis')) {
+        throw httpError(403, 'Demo sessions can use file analysis only');
+      }
 
       if (request.method === 'POST' && url.pathname === '/api/files/upload') {
         const response = await handleFileUpload(request, env, user, requestId);
@@ -121,7 +126,27 @@ export default {
       if (request.method === 'POST' && url.pathname.startsWith('/api/ai/')) {
         const moduleName = url.pathname.slice('/api/ai/'.length);
         if (!MODULES[moduleName]) return json({ ok: false, error: 'Unknown AI module', requestId }, 404, request);
-        const body = await readJson(request);
+        let body = await readJson(request);
+        if (user.isDemo) {
+          const contentLength = Number(request.headers.get('Content-Length') || 0);
+          if (contentLength > 100000) throw httpError(413, 'Demo analysis request is too large');
+          if (moduleName !== 'file-analysis') throw httpError(403, 'Demo sessions can use file analysis only');
+          body = {
+            ...body,
+            message: 'Analyze the supplied file text in Arabic. Base the answer only on that text.',
+            projectId: '',
+            officeId: '',
+            useKnowledge: false,
+            maxTokens: 1200,
+            context: {
+              fileName: limitText(body.context?.fileName || '', 180),
+              fileType: limitText(body.context?.fileType || '', 80),
+              discipline: limitText(body.context?.discipline || '', 120),
+              projectName: limitText(body.context?.projectName || '', 180),
+              fileText: limitText(body.context?.fileText || '', 48000)
+            }
+          };
+        }
         const result = await runModule(env, user, moduleName, body, requestId);
         audit(ctx, env, user, requestId, moduleName, { projectId: body.projectId || null, sources: result.sources?.length || 0 });
         return json({ ok: true, requestId, module: moduleName, ...result }, 200, request);
@@ -151,20 +176,34 @@ export default {
 };
 
 async function authenticate(request, env) {
-  if (!env.FIREBASE_API_KEY) throw httpError(503, 'Worker is missing its Firebase API key binding');
+  const candidates = [
+    { key: env.FIREBASE_API_KEY, isDemo: false },
+    { key: env.FIREBASE_DEMO_API_KEY, isDemo: true }
+  ].filter(candidate => candidate.key);
+  if (!candidates.length) throw httpError(503, 'Worker is missing its Firebase API key bindings');
   const auth = request.headers.get('Authorization') || '';
   if (!auth.startsWith('Bearer ')) throw httpError(401, 'Authentication required');
   const token = auth.slice(7).trim();
-  const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(env.FIREBASE_API_KEY || '')}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken: token })
-  });
-  if (!response.ok) throw httpError(401, 'Invalid or expired Firebase session');
-  const data = await response.json();
-  const account = data.users?.[0];
-  if (!account?.localId || account.disabled) throw httpError(401, 'Invalid Firebase user');
-  return { token, uid: account.localId, email: account.email || '', emailVerified: !!account.emailVerified };
+
+  for (const candidate of candidates) {
+    const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(candidate.key)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: token })
+    });
+    if (!response.ok) continue;
+    const data = await response.json();
+    const account = data.users?.[0];
+    if (!account?.localId || account.disabled) throw httpError(401, 'Invalid Firebase user');
+    return {
+      token,
+      uid: account.localId,
+      email: account.email || '',
+      emailVerified: !!account.emailVerified,
+      isDemo: candidate.isDemo
+    };
+  }
+  throw httpError(401, 'Invalid or expired Firebase session');
 }
 
 async function loadOwnProfile(token, uid) {
