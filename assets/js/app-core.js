@@ -19,6 +19,15 @@ function button(action,text,kind='btn',ic=''){return `<button class="${kind}" da
 function safeDownloadName(value){return String(value||'KHALIYA').replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,'-').replace(/-+/g,'-').slice(0,80)}
 function loadScriptOnce(src,globalName,timeoutMs=12000){return new Promise((resolve,reject)=>{if(globalName&&window[globalName]){resolve(window[globalName]);return}let script=[...document.scripts].find(s=>s.src===src),created=!script;if(created){script=document.createElement('script');script.src=src;script.async=true}let settled=false,timer;const finish=error=>{if(settled)return;settled=true;clearTimeout(timer);script.removeEventListener('load',onload);script.removeEventListener('error',onerror);error?reject(error):resolve(globalName?window[globalName]:true)};const onload=()=>globalName&&!window[globalName]?finish(new Error('لم يوفّر محرك PDF واجهته المطلوبة')):finish();const onerror=()=>finish(new Error('تعذر تحميل محرك PDF من الشبكة'));timer=setTimeout(()=>finish(new Error('انتهت مهلة تحميل محرك PDF')),timeoutMs);script.addEventListener('load',onload,{once:true});script.addEventListener('error',onerror,{once:true});if(created)document.head.append(script)})}
 
+
+function pdfCaptureOptions(){
+ return {scale:2,useCORS:true,backgroundColor:'#ffffff',onclone:doc=>{
+  const report=doc.querySelector('.khaliya-pdf-sheet');
+  if(report){report.style.setProperty('position','relative','important');report.style.setProperty('left','0','important');report.style.setProperty('top','0','important');report.style.setProperty('z-index','1','important');report.style.setProperty('visibility','visible','important');report.style.setProperty('opacity','1','important');report.style.setProperty('overflow','visible','important')}
+  doc.querySelectorAll('.file-analysis-result').forEach(result=>{result.style.setProperty('max-height','none','important');result.style.setProperty('overflow','visible','important');result.style.setProperty('white-space','normal','important')});
+ }};
+}
+
 async function reportImageData(src,opacity=1){
  const image=new Image();image.crossOrigin='anonymous';
  await new Promise(resolve=>{image.onload=resolve;image.onerror=resolve;image.src=src});
@@ -67,7 +76,7 @@ async function downloadWorkspaceSummaryPdf(){
    await loadScriptOnce('assets/js/vendor/html2pdf.bundle.min.js','html2pdf');
    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
    const filename=safeDownloadName(office)+'-KHALIYA-summary-'+now.toISOString().slice(0,10)+'.pdf';
-   await window.html2pdf().set({margin:[28,8,18,8],filename,image:{type:'jpeg',quality:.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(node).toPdf().get('pdf').then(pdf=>addReportPageBranding(pdf,office,'ملخص أداء المكتب')).save();
+   await window.html2pdf().set({margin:[28,8,18,8],filename,image:{type:'jpeg',quality:.96},html2canvas:pdfCaptureOptions(),jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(node).toPdf().get('pdf').then(pdf=>addReportPageBranding(pdf,office,'ملخص أداء المكتب')).save();
    toast('تم تنزيل ملخص المكتب بصيغة PDF');
  }catch(error){
    console.error('KHALIYA PDF export failed',error);
@@ -101,10 +110,10 @@ function analysisMarkup(value){
 async function downloadFileAnalysisPdf(file){
  if(!file?.analysis)throw new Error('لا يوجد ملخص محفوظ لهذا الملف.');
  const state=getState(),office=state.settings.office||state.user?.officeName||'مكتب خلية',now=new Date(),sources=(file.analysisSources||[]).map(x=>typeof x==='string'?x:(x.title||x.id||'مرجع')).filter(Boolean);
- const node=document.createElement('section');node.dir='rtl';node.style.cssText='box-sizing:border-box;width:190mm;min-height:270mm;padding:14mm 15mm;color:#172b3b;background:#fff;font-family:Arial,sans-serif;line-height:1.8';
+ const node=document.createElement('section');node.className='khaliya-pdf-sheet';node.dir='rtl';node.style.cssText='box-sizing:border-box;width:190mm;min-height:270mm;padding:14mm 15mm;color:#172b3b;background:#fff;font-family:Arial,sans-serif;line-height:1.8';
  const rows=[['اسم الملف',file.name],['رقم الملف',file.code],['التخصص',file.discipline],['الإصدار','v'+(file.version||1)],['المكتب',office],['تاريخ التحليل',file.analysisUpdatedAt?new Date(file.analysisUpdatedAt).toLocaleString('ar-SA'):'—']].filter(([,v])=>v);
  node.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 18px;background:#f4f8f7;padding:14px;margin-bottom:22px">'+rows.map(([k,v])=>'<div><b>'+esc(k)+':</b> '+esc(v)+'</div>').join('')+'</div><h2 style="font-size:17px;color:#164e4a">ملخص الذكاء الاصطناعي</h2>'+analysisMarkup(file.analysis)+'<h3 style="font-size:15px;color:#164e4a">المصادر المرتبطة</h3><p>'+esc(sources.join('، ')||'لا توجد مصادر مرتبطة')+'</p><div style="margin-top:24px;padding:12px;border-right:4px solid #bd8c3c;background:#fff8e9;font-size:12px">هذا التقرير مساعدة أولية مولّدة بالذكاء الاصطناعي، ويجب مراجعتها من مهندس مختص قبل الاعتماد أو اتخاذ قرار تنفيذي.</div>';
- document.body.append(node);try{await loadScriptOnce('assets/js/vendor/html2pdf.bundle.min.js','html2pdf');await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));await window.html2pdf() .set({margin:[28,8,18,8],filename:safeDownloadName(file.name)+'-KHALIYA-analysis.pdf',image:{type:'jpeg',quality:.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(node).toPdf().get('pdf').then(pdf=>addReportPageBranding(pdf,office,'تقرير تحليل ملف')).save();toast('تم تنزيل تقرير تحليل الملف PDF')}finally{node.remove()}
+ document.body.append(node);try{await loadScriptOnce('assets/js/vendor/html2pdf.bundle.min.js','html2pdf');await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));await window.html2pdf() .set({margin:[28,8,18,8],filename:safeDownloadName(file.name)+'-KHALIYA-analysis.pdf',image:{type:'jpeg',quality:.96},html2canvas:pdfCaptureOptions(),jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(node).toPdf().get('pdf').then(pdf=>addReportPageBranding(pdf,office,'تقرير تحليل ملف')).save();toast('تم تنزيل تقرير تحليل الملف PDF')}finally{node.remove()}
 }
 
 function projectTable(rows){return `<div class="table-wrap"><table class="data-table"><thead><tr><th>المشروع</th><th>العميل</th><th>مدير المشروع</th><th>موعد التسليم</th><th>الإنجاز</th><th>الحالة</th><th></th></tr></thead><tbody>${rows.map(p=>`<tr><td><div class="row-main"><span class="project-mark">${esc(p.code.slice(-3))}</span><span><strong>${esc(p.name)}</strong><small>${esc(p.code)} · ${esc(p.location)}</small></span></div></td><td>${esc(p.client)}</td><td>${esc(p.manager)}</td><td>${fmtDate(p.due)}</td><td><div style="display:flex;align-items:center;gap:8px"><span class="progress"><span style="width:${projectProgress(p.id)}%"></span></span><small>${projectProgress(p.id)}%</small></div></td><td>${status(p.status)}</td><td><a class="btn btn-sm btn-icon" href="workspace.html?project=${encodeURIComponent(p.id)}" aria-label="فتح المشروع">${icon('arrow')}</a></td></tr>`).join('')}</tbody></table></div>`}
