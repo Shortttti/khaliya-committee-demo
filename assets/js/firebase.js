@@ -5,10 +5,13 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/fireba
 import { getAuth } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyAR91u_YiTtphKfzr6gLstr-1msZkZvL9U',
-  authDomain: 'khaliyah-engineer-office.firebaseapp.com',
-  projectId: 'khaliyah-engineer-office',
-  appId: '1:292505250732:web:c22dc8142b3eb668d26809'
+  apiKey: 'AIzaSyC8CPdM1QfZTSSNPhsGL1wS1dwlslJEaNE',
+  authDomain: 'khaliya-committee-demo-auth.firebaseapp.com',
+  projectId: 'khaliya-committee-demo-auth',
+  storageBucket: 'khaliya-committee-demo-auth.firebasestorage.app',
+  messagingSenderId: '848815064249',
+  appId: '1:848815064249:web:8ca9c290aeeb3b07da8768',
+  measurementId: 'G-LQM9HFE38J'
 };
 
 const app = initializeApp(firebaseConfig, 'KHALIYA-AI-demo');
