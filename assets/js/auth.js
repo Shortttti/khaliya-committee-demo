@@ -6,7 +6,7 @@ if(!document.querySelector('link[data-demo-css]')){const link=document.createEle
 
 const sampleUsers = [
   {uid:'demo-manager',name:'خالد العتيبي',email:'manager@khaliya.demo',role:'manager'},
-  {uid:'demo-engineer',name:'سارة القحطاني',email:'engineer@khaliya.demo',role:'engineer'},
+  {uid:'demo-engineer',name:'سارة القحطاني',email:'engineer@khaliya.demo',role:'engineer',projectIds:['riyadh-center','north-campus','heritage-hotel','airport-terminal','jeddah-hospital','makkah-hotel','khobar-waterfront','riyadh-schools']},
   {uid:'demo-client',name:'أحمد الشمري',email:'client@khaliya.demo',role:'client'},
   {uid:'demo-consultant',name:'فهد المطيري',email:'consultant@khaliya.demo',role:'consultant'}
 ];
