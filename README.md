@@ -15,7 +15,7 @@
 
 ## الذكاء الاصطناعي
 
-تستخدم وحدات AI عامل KHALIYA الحالي `khaliyah-engineering-office.short-story-im.workers.dev`. من شاشة الدخول، أدخل بريد وكلمة مرور حساب KHALIYA الفعلي لتكوين جلسة Firebase Authentication؛ لا يُنشأ سجل Firestore من نسخة العرض. طلبات AI ترسل سياق المشروع التجريبي يدويًا مع `useKnowledge:false` كي لا تسترجع ملفات أو بيانات قاعدة المكتب.
+تستخدم وحدات AI عامل KHALIYA الحالي `khaliyah-engineering-office.short-story-im.workers.dev`. من شاشة الدخول، أدخل بريد وكلمة مرور حساب KHALIYA الفعلي لتكوين جلسة Firebase Authentication؛ لا يُنشأ سجل Firestore من نسخة العرض. طلبات AI ترسل سياق المشروع التجريبي يدويًا مع `useKnowledge:false`، فلا تسترجع ملفات المشروع أو بياناته. العامل الحالي يتحقق من ملف هوية المستخدم في الخلفية؛ بقية بيانات العرض لا تُرسل إلى Firestore.
 
 ## نشر Pages
 
