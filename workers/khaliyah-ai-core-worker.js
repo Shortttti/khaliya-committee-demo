@@ -77,8 +77,8 @@ export default {
         ? { uid: session.uid, role: 'demo', officeId: null, permissions: { officeWideAI: false } }
         : await loadOwnProfile(session.token, session.uid);
       const user = { ...session, profile };
-      if (user.isDemo && !(request.method === 'POST' && url.pathname === '/api/ai/file-analysis')) {
-        throw httpError(403, 'Demo sessions can use file analysis only');
+      if (user.isDemo && !(request.method === 'POST' && ['/api/ai/file-analysis','/api/ai/chat','/api/ai/consultation'].includes(url.pathname))) {
+        throw httpError(403, 'Demo sessions can use approved AI features only');
       }
 
       if (request.method === 'POST' && url.pathname === '/api/files/upload') {
@@ -130,22 +130,21 @@ export default {
         if (user.isDemo) {
           const contentLength = Number(request.headers.get('Content-Length') || 0);
           if (contentLength > 100000) throw httpError(413, 'Demo analysis request is too large');
-          if (moduleName !== 'file-analysis') throw httpError(403, 'Demo sessions can use file analysis only');
-          body = {
-            ...body,
-            message: 'Analyze the supplied file text in Arabic. Base the answer only on that text.',
-            projectId: '',
-            officeId: '',
-            useKnowledge: false,
-            maxTokens: 1200,
-            context: {
+          if (!['file-analysis','chat','consultation'].includes(moduleName)) throw httpError(403, 'This AI feature is not enabled for demo sessions');
+          body = { ...body, projectId: '', officeId: '', useKnowledge: false, maxTokens: moduleName === 'file-analysis' ? 1200 : 1000 };
+          if (moduleName === 'file-analysis') {
+            body.message = 'Analyze the supplied file text in Arabic. Base the answer only on that text.';
+            body.context = {
               fileName: limitText(body.context?.fileName || '', 180),
               fileType: limitText(body.context?.fileType || '', 80),
               discipline: limitText(body.context?.discipline || '', 120),
               projectName: limitText(body.context?.projectName || '', 180),
               fileText: limitText(body.context?.fileText || '', 48000)
-            }
-          };
+            };
+          } else {
+            body.message = limitText(body.message || body.prompt || body.question || '', 12000);
+            body.context = limitText(stringifyContext(body.context, 24000), 24000);
+          }
         }
         const result = await runModule(env, user, moduleName, body, requestId);
         audit(ctx, env, user, requestId, moduleName, { projectId: body.projectId || null, sources: result.sources?.length || 0 });
