@@ -824,7 +824,7 @@ input[type="date"],input[type="time"],select{cursor:pointer}
 .khaliya-pdf-sheet table{width:100%;border-collapse:collapse;font-size:11px}.khaliya-pdf-sheet th,.khaliya-pdf-sheet td{border:1px solid #dce5df;padding:8px;text-align:right}.khaliya-pdf-sheet th{background:#edf6f0;color:#174b37}
 .khaliya-pdf-sheet ul{padding-inline-start:20px;font-size:11px}
 .khaliya-pdf-sheet>footer{margin-top:30px;padding-top:12px;border-top:1px solid #dce5df;text-align:center;font-size:9px;color:#6e7d74}
-.khaliya-pdf-watermark{position:absolute;inset:285px 170px auto;opacity:.035;pointer-events:none}.khaliya-pdf-watermark img{width:430px;max-width:100%}
+.khaliya-pdf-sheet{isolation:isolate}.khaliya-pdf-watermark{position:absolute;left:50%;top:53%;transform:translate(-50%,-50%);width:min(560px,82%);opacity:.105;pointer-events:none;z-index:0;display:grid;place-items:center}.khaliya-pdf-watermark img{display:block;width:100%;max-width:100%;height:auto;object-fit:contain}.khaliya-pdf-sheet>header,.khaliya-pdf-sheet>.khaliya-pdf-meta,.khaliya-pdf-sheet>.khaliya-pdf-stats,.khaliya-pdf-sheet>h2,.khaliya-pdf-sheet>table,.khaliya-pdf-sheet>ul,.khaliya-pdf-sheet>footer{position:relative;z-index:1}.file-analysis-result{display:block;white-space:pre-wrap;line-height:1.9;max-height:50vh;overflow:auto}
 
 .office-invite-banner{display:grid;grid-template-columns:48px minmax(0,1fr) 42px;align-items:center;gap:14px;margin:0 0 16px;padding:15px 18px;border:1px solid #cbded1;border-radius:16px;background:linear-gradient(110deg,#f8fbf8,#eef6f0);box-shadow:0 8px 22px #17382d0b}
 .office-invite-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:#174b37;color:#fff}
