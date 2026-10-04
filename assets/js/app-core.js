@@ -18,6 +18,39 @@ function renderHeading(kicker,title,desc,actions=''){return `<div class="page-he
 function button(action,text,kind='btn',ic=''){return `<button class="${kind}" data-action="${action}">${ic?icon(ic):''}${text}</button>`}
 function safeDownloadName(value){return String(value||'KHALIYA').replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,'-').replace(/-+/g,'-').slice(0,80)}
 function loadScriptOnce(src,globalName,timeoutMs=12000){return new Promise((resolve,reject)=>{if(globalName&&window[globalName]){resolve(window[globalName]);return}let script=[...document.scripts].find(s=>s.src===src),created=!script;if(created){script=document.createElement('script');script.src=src;script.async=true}let settled=false,timer;const finish=error=>{if(settled)return;settled=true;clearTimeout(timer);script.removeEventListener('load',onload);script.removeEventListener('error',onerror);error?reject(error):resolve(globalName?window[globalName]:true)};const onload=()=>globalName&&!window[globalName]?finish(new Error('لم يوفّر محرك PDF واجهته المطلوبة')):finish();const onerror=()=>finish(new Error('تعذر تحميل محرك PDF من الشبكة'));timer=setTimeout(()=>finish(new Error('انتهت مهلة تحميل محرك PDF')),timeoutMs);script.addEventListener('load',onload,{once:true});script.addEventListener('error',onerror,{once:true});if(created)document.head.append(script)})}
+
+async function reportImageData(src,opacity=1){
+ const image=new Image();image.crossOrigin='anonymous';
+ await new Promise(resolve=>{image.onload=resolve;image.onerror=resolve;image.src=src});
+ if(!image.naturalWidth)return '';
+ const canvas=document.createElement('canvas');canvas.width=700;canvas.height=700;
+ const context=canvas.getContext('2d');context.globalAlpha=opacity;
+ const scale=Math.min(1,640/Math.max(image.naturalWidth,image.naturalHeight));
+ const width=image.naturalWidth*scale,height=image.naturalHeight*scale;
+ context.drawImage(image,(700-width)/2,(700-height)/2,width,height);
+ return canvas.toDataURL('image/png');
+}
+async function addReportPageBranding(pdf,office,title){
+ const size=pdf.internal.pageSize,width=size.getWidth?size.getWidth():size.width,height=size.getHeight?size.getHeight():size.height;
+ const header=document.createElement('canvas');header.width=1600;header.height=190;
+ const h=header.getContext('2d');h.fillStyle='#1c6a66';h.fillRect(0,178,1600,4);
+ const logoImage=await new Promise(resolve=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src='assets/brand/khaliya-full-logo-dark.png'});
+ if(logoImage?.naturalWidth){const scale=Math.min(330/logoImage.naturalWidth,135/logoImage.naturalHeight),w=logoImage.naturalWidth*scale,hh=logoImage.naturalHeight*scale;h.drawImage(logoImage,35,18+(135-hh)/2,w,hh)}
+ h.direction='rtl';h.textAlign='right';h.fillStyle='#164e4a';h.font='bold 42px Arial';h.fillText(title,1550,76);
+ h.fillStyle='#42545a';h.font='28px Arial';h.fillText('اسم المكتب: '+office,1550,132);
+ const footer=document.createElement('canvas');footer.width=1600;footer.height=100;
+ const f=footer.getContext('2d');f.fillStyle='#b9c9c5';f.fillRect(0,2,1600,2);
+ f.direction='rtl';f.textAlign='right';f.fillStyle='#64747b';f.font='22px Arial';f.fillText('© KHALIYA | خلية · منصة العمل الهندسي السحابية · جميع الحقوق محفوظة',1580,48);
+ const watermark=await reportImageData('assets/brand/khaliya-logo.png',.085);
+ const headerPng=header.toDataURL('image/png'),footerPng=footer.toDataURL('image/png'),pageCount=pdf.getNumberOfPages();
+ for(let page=1;page<=pageCount;page++){
+  pdf.setPage(page);
+  if(watermark)pdf.addImage(watermark,'PNG',width/2-52,height/2-52,104,104);
+  pdf.addImage(headerPng,'PNG',8,4,width-16,(width-16)*190/1600);
+  pdf.addImage(footerPng,'PNG',8,height-14,width-16,(width-16)*100/1600);
+ }
+}
+
 async function downloadWorkspaceSummaryPdf(){
  const s=getState(),user=s.user||{},office=s.settings.office||user.officeName||'مكتب خلية',now=new Date();
  const projectId=new URLSearchParams(location.search).get('project')||s.settings.project||'',scopeProject=s.projects.find(p=>p.id===projectId)||null,projects=scopeProject?[scopeProject]:s.projects;
@@ -28,19 +61,19 @@ async function downloadWorkspaceSummaryPdf(){
  const projectRows=projects.map(p=>'<tr><td>'+esc(p.name||p.id)+'</td><td>'+esc(p.code||p.id)+'</td><td>'+esc(p.manager||'—')+'</td><td>'+projectProgress(p.id,s)+'%</td></tr>').join('')||'<tr><td colspan="4">لا توجد مشاريع مسجلة.</td></tr>';
  const node=document.createElement('section');
  node.className='khaliya-pdf-sheet';node.dir='rtl';
- node.innerHTML='<div class="khaliya-pdf-watermark" aria-hidden="true" style="position:absolute;left:50%;top:53%;transform:translate(-50%,-50%);width:min(560px,82%);opacity:.105;pointer-events:none;z-index:0;display:grid;place-items:center"><img src="assets/brand/khaliya-logo.png" alt="" style="display:block;width:100%;max-width:100%;height:auto;object-fit:contain"></div><header dir="ltr"><img class="khaliya-pdf-header-logo" src="assets/brand/khaliya-full-logo-dark.png" alt="خلية | KHALIYA"><div dir="rtl"><h1>ملخص أداء المكتب</h1><p><b>اسم المشروع:</b> '+esc(scopeProject?.name||'جميع مشاريع المكتب')+'</p><p><b>اسم المكتب:</b> '+esc(office)+'</p><small>حُمّل بواسطة: '+esc(user.name||user.email||'مستخدم خلية')+'</small></div></header><div class="khaliya-pdf-meta"><span>تاريخ التقرير: '+esc(now.toLocaleString('ar-SA'))+'</span></div><div class="khaliya-pdf-stats"><article><b>'+totalProjects+'</b><span>مشاريع</span></article><article><b>'+totalTasks+'</b><span>مهام</span></article><article><b>'+done+'</b><span>مهام مكتملة</span></article><article><b>'+overdue+'</b><span>مهام متأخرة</span></article><article><b>'+openChanges+'</b><span>تغييرات مفتوحة</span></article><article><b>'+cost.toLocaleString('en-US')+'</b><span>تكلفة البنود ر.س</span></article></div><h2>حالة المشاريع</h2><table><thead><tr><th>المشروع</th><th>الرمز</th><th>مدير المشروع</th><th>الإنجاز</th></tr></thead><tbody>'+projectRows+'</tbody></table><h2>آخر النشاطات</h2><ul>'+(activities.slice(0,10).map(x=>'<li><b>'+esc(x.text||'تحديث')+'</b> — '+esc(x.detail||'')+'</li>').join('')||'<li>لا توجد نشاطات مسجلة.</li>')+'</ul><footer>© KHALIYA | خلية · منصة العمل الهندسي السحابية</footer>';
+ node.innerHTML='<div class="khaliya-pdf-meta"><span><b>المشروع:</b> '+esc(scopeProject?.name||'جميع مشاريع المكتب')+'</span><span><b>أُعد بواسطة:</b> '+esc(user.name||user.email||'مستخدم خلية')+'</span><span><b>التاريخ:</b> '+esc(now.toLocaleString('ar-SA'))+'</span></div><div class="khaliya-pdf-stats"><article><b>'+totalProjects+'</b><span>مشاريع</span></article><article><b>'+totalTasks+'</b><span>مهام</span></article><article><b>'+done+'</b><span>مهام مكتملة</span></article><article><b>'+overdue+'</b><span>مهام متأخرة</span></article><article><b>'+openChanges+'</b><span>تغييرات مفتوحة</span></article><article><b>'+cost.toLocaleString('en-US')+'</b><span>تكلفة البنود ر.س</span></article></div><h2>حالة المشاريع</h2><table><thead><tr><th>المشروع</th><th>الرمز</th><th>مدير المشروع</th><th>الإنجاز</th></tr></thead><tbody>'+projectRows+'</tbody></table><h2>آخر النشاطات</h2><ul>'+(activities.slice(0,10).map(x=>'<li><b>'+esc(x.text||'تحديث')+'</b> — '+esc(x.detail||'')+'</li>').join('')||'<li>لا توجد نشاطات مسجلة.</li>')+'</ul>';
  document.body.append(node);
  try{
    await loadScriptOnce('assets/js/vendor/html2pdf.bundle.min.js','html2pdf');
    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
    const filename=safeDownloadName(office)+'-KHALIYA-summary-'+now.toISOString().slice(0,10)+'.pdf';
-   await window.html2pdf().set({margin:[8,8,10,8],filename,image:{type:'jpeg',quality:.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(node).save();
+   await window.html2pdf().set({margin:[28,8,18,8],filename,image:{type:'jpeg',quality:.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(node).toPdf().get('pdf').then(pdf=>addReportPageBranding(pdf,office,'ملخص أداء المكتب')).save();
    toast('تم تنزيل ملخص المكتب بصيغة PDF');
  }catch(error){
    console.error('KHALIYA PDF export failed',error);
    const printStyle=document.createElement('style');
    printStyle.setAttribute('data-pdf-print-fallback','');
-   printStyle.textContent='@media print{body>*:not(.khaliya-pdf-sheet){display:none!important}html,body{background:#fff!important;margin:0!important;padding:0!important}.khaliya-pdf-sheet{display:block!important;position:static!important;width:auto!important;min-height:0!important;margin:0!important;box-shadow:none!important}.khaliya-pdf-watermark{opacity:.08!important}}';
+   printStyle.textContent='@media print{body>*:not(.khaliya-pdf-sheet){display:none!important}html,body{background:#fff!important;margin:0!important;padding:0!important}.khaliya-pdf-sheet{display:block!important;position:static!important;width:auto!important;min-height:0!important;margin:0!important;box-shadow:none!important}}';
    document.head.append(printStyle);
    const cleanup=()=>{printStyle.remove();window.removeEventListener('afterprint',cleanup)};
    window.addEventListener('afterprint',cleanup,{once:true});
@@ -70,8 +103,8 @@ async function downloadFileAnalysisPdf(file){
  const state=getState(),office=state.settings.office||state.user?.officeName||'مكتب خلية',now=new Date(),sources=(file.analysisSources||[]).map(x=>typeof x==='string'?x:(x.title||x.id||'مرجع')).filter(Boolean);
  const node=document.createElement('section');node.dir='rtl';node.style.cssText='box-sizing:border-box;width:190mm;min-height:270mm;padding:14mm 15mm;color:#172b3b;background:#fff;font-family:Arial,sans-serif;line-height:1.8';
  const rows=[['اسم الملف',file.name],['رقم الملف',file.code],['التخصص',file.discipline],['الإصدار','v'+(file.version||1)],['المكتب',office],['تاريخ التحليل',file.analysisUpdatedAt?new Date(file.analysisUpdatedAt).toLocaleString('ar-SA'):'—']].filter(([,v])=>v);
- node.innerHTML='<header style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #1c6a66;padding-bottom:14px;margin-bottom:20px"><img src="assets/brand/khaliya-full-logo-dark.png" alt="خلية | KHALIYA" style="width:190px;max-height:62px;object-fit:contain"><div><h1 style="margin:0;font-size:22px;color:#164e4a">تقرير تحليل ملف</h1>'+esc(office)+'</div></header><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 18px;background:#f4f8f7;padding:14px;margin-bottom:22px">'+rows.map(([k,v])=>'<div><b>'+esc(k)+':</b> '+esc(v)+'</div>').join('')+'</div><h2 style="font-size:17px;color:#164e4a">ملخص الذكاء الاصطناعي</h2>'+analysisMarkup(file.analysis)+'<h3 style="font-size:15px;color:#164e4a">المصادر المرتبطة</h3><p>'+esc(sources.join('، ')||'لا توجد مصادر مرتبطة')+'</p><div style="margin-top:24px;padding:12px;border-right:4px solid #bd8c3c;background:#fff8e9;font-size:12px">هذا التقرير مساعدة أولية مولّدة بالذكاء الاصطناعي، ويجب مراجعتها من مهندس مختص قبل الاعتماد أو اتخاذ قرار تنفيذي.</div><footer style="margin-top:28px;padding-top:10px;border-top:1px solid #dce4e2;font-size:10px;color:#64747b">© KHALIYA | خلية · منصة العمل الهندسي السحابية — '+esc(now.toLocaleDateString('ar-SA'))+'</footer>';
- document.body.append(node);try{await loadScriptOnce('assets/js/vendor/html2pdf.bundle.min.js','html2pdf');await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));await window.html2pdf().set({margin:8,filename:safeDownloadName(file.name)+'-KHALIYA-analysis.pdf',image:{type:'jpeg',quality:.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(node).save();toast('تم تنزيل تقرير تحليل الملف PDF')}finally{node.remove()}
+ node.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 18px;background:#f4f8f7;padding:14px;margin-bottom:22px">'+rows.map(([k,v])=>'<div><b>'+esc(k)+':</b> '+esc(v)+'</div>').join('')+'</div><h2 style="font-size:17px;color:#164e4a">ملخص الذكاء الاصطناعي</h2>'+analysisMarkup(file.analysis)+'<h3 style="font-size:15px;color:#164e4a">المصادر المرتبطة</h3><p>'+esc(sources.join('، ')||'لا توجد مصادر مرتبطة')+'</p><div style="margin-top:24px;padding:12px;border-right:4px solid #bd8c3c;background:#fff8e9;font-size:12px">هذا التقرير مساعدة أولية مولّدة بالذكاء الاصطناعي، ويجب مراجعتها من مهندس مختص قبل الاعتماد أو اتخاذ قرار تنفيذي.</div>';
+ document.body.append(node);try{await loadScriptOnce('assets/js/vendor/html2pdf.bundle.min.js','html2pdf');await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));await window.html2pdf() .set({margin:[28,8,18,8],filename:safeDownloadName(file.name)+'-KHALIYA-analysis.pdf',image:{type:'jpeg',quality:.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(node).toPdf().get('pdf').then(pdf=>addReportPageBranding(pdf,office,'تقرير تحليل ملف')).save();toast('تم تنزيل تقرير تحليل الملف PDF')}finally{node.remove()}
 }
 
 function projectTable(rows){return `<div class="table-wrap"><table class="data-table"><thead><tr><th>المشروع</th><th>العميل</th><th>مدير المشروع</th><th>موعد التسليم</th><th>الإنجاز</th><th>الحالة</th><th></th></tr></thead><tbody>${rows.map(p=>`<tr><td><div class="row-main"><span class="project-mark">${esc(p.code.slice(-3))}</span><span><strong>${esc(p.name)}</strong><small>${esc(p.code)} · ${esc(p.location)}</small></span></div></td><td>${esc(p.client)}</td><td>${esc(p.manager)}</td><td>${fmtDate(p.due)}</td><td><div style="display:flex;align-items:center;gap:8px"><span class="progress"><span style="width:${projectProgress(p.id)}%"></span></span><small>${projectProgress(p.id)}%</small></div></td><td>${status(p.status)}</td><td><a class="btn btn-sm btn-icon" href="workspace.html?project=${encodeURIComponent(p.id)}" aria-label="فتح المشروع">${icon('arrow')}</a></td></tr>`).join('')}</tbody></table></div>`}
