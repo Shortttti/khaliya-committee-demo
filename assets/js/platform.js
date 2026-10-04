@@ -1,5 +1,5 @@
 import { auth, db } from './firebase.js';
-import { bindCloudStore, getState, updateState, updateLocalOfficeName, makeId, flushPendingWrites } from './store.js?v=khaliya-14';
+import { bindCloudStore, getState, updateState, updateLocalOfficeName, makeId, flushPendingWrites } from './store.js?v=khaliya-15';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, serverTimestamp, runTransaction, writeBatch } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
